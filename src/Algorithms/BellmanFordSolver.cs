@@ -26,6 +26,7 @@ namespace SmartEmergencyRoutePlanner.Algorithms
 
             dist[source] = 0;
             bool hasNegativeCycle = false;
+            long relaxationCount = 0;
 
             // Relax edges V - 1 times
             for (int i = 1; i <= n - 1; i++)
@@ -33,9 +34,13 @@ namespace SmartEmergencyRoutePlanner.Algorithms
                 bool relaxedAny = false;
                 foreach (var edge in graph.AllEdges)
                 {
+                    // Ignore closed roads
+                    if (edge.IsClosed) continue;
+
+                    relaxationCount++;
                     int u = edge.From;
                     int v = edge.To;
-                    double weight = edge.TravelTimeMinutes;
+                    double weight = edge.EffectiveTravelTimeMinutes;
 
                     if (dist[u] < double.PositiveInfinity && dist[u] + weight < dist[v])
                     {
@@ -55,9 +60,13 @@ namespace SmartEmergencyRoutePlanner.Algorithms
             // Check for negative weight cycles
             foreach (var edge in graph.AllEdges)
             {
+                // Ignore closed roads
+                if (edge.IsClosed) continue;
+
+                relaxationCount++;
                 int u = edge.From;
                 int v = edge.To;
-                double weight = edge.TravelTimeMinutes;
+                double weight = edge.EffectiveTravelTimeMinutes;
 
                 if (dist[u] < double.PositiveInfinity && dist[u] + weight < dist[v])
                 {
@@ -76,7 +85,8 @@ namespace SmartEmergencyRoutePlanner.Algorithms
                 IsReachable = isReachable,
                 RuntimeTicks = stopwatch.ElapsedTicks,
                 RuntimeMilliseconds = stopwatch.Elapsed.TotalMilliseconds,
-                ExpandedNodes = 0, // Bellman-Ford relaxes edges rather than expanding nodes via a queue
+                ExpandedNodes = 0, // Bellman-Ford relaxes edges, no node queue expansion
+                RelaxationCount = relaxationCount,
                 HasNegativeCycle = hasNegativeCycle,
                 Notes = hasNegativeCycle ? "Negative cycle detected!" : (isReachable ? "Optimal path found." : "Target unreachable.")
             };

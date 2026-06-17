@@ -11,6 +11,7 @@ namespace SmartEmergencyRoutePlanner.Models
         public long RuntimeTicks { get; set; }
         public double RuntimeMilliseconds { get; set; }
         public int ExpandedNodes { get; set; }
+        public long RelaxationCount { get; set; }
         public bool HasNegativeCycle { get; set; }
         public string Notes { get; set; } = string.Empty;
     }

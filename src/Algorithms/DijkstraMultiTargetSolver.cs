@@ -6,12 +6,13 @@ using SmartEmergencyRoutePlanner.DataStructures;
 
 namespace SmartEmergencyRoutePlanner.Algorithms
 {
-    public class DijkstraSolver
+    public class DijkstraMultiTargetSolver
     {
         /// <summary>
-        /// Solves the shortest path problem using Dijkstra's algorithm.
+        /// Solves the multi-hospital routing query by executing a single-source Dijkstra run,
+        /// then identifying the target hospital with the minimum travel time.
         /// </summary>
-        public PathResult Solve(Graph graph, int source, int target)
+        public PathResult Solve(Graph graph, int source, List<int> targetHospitals)
         {
             var stopwatch = Stopwatch.StartNew();
 
@@ -32,33 +33,25 @@ namespace SmartEmergencyRoutePlanner.Algorithms
 
             int expandedNodes = 0;
             long relaxationCount = 0;
-            bool reached = false;
 
+            // Run Dijkstra to completion to capture distances to all vertices
             while (!heap.IsEmpty)
             {
                 var minNode = heap.ExtractMin();
                 int u = minNode.VertexId;
                 double currentDist = minNode.Priority;
 
-                // Lazy deletion of stale elements
+                // Skip stale entry
                 if (currentDist > dist[u])
                 {
                     continue;
                 }
 
                 expandedNodes++;
-
-                if (u == target)
-                {
-                    reached = true;
-                    break;
-                }
-
                 visited[u] = true;
 
                 foreach (var edge in graph.GetNeighbors(u))
                 {
-                    // Ignore closed roads
                     if (edge.IsClosed) continue;
 
                     relaxationCount++;
@@ -75,26 +68,39 @@ namespace SmartEmergencyRoutePlanner.Algorithms
                 }
             }
 
+            // Find target hospital with lowest travel time
+            double bestTime = double.PositiveInfinity;
+            int bestHospital = -1;
+
+            foreach (int hospital in targetHospitals)
+            {
+                if (dist[hospital] < bestTime)
+                {
+                    bestTime = dist[hospital];
+                    bestHospital = hospital;
+                }
+            }
+
             stopwatch.Stop();
 
-            bool isReachable = reached || (dist[target] < double.PositiveInfinity);
+            bool isReachable = bestHospital != -1 && bestTime < double.PositiveInfinity;
 
             var result = new PathResult
             {
-                AlgorithmName = "Dijkstra",
+                AlgorithmName = "Dijkstra Multi-Target",
                 IsReachable = isReachable,
                 RuntimeTicks = stopwatch.ElapsedTicks,
                 RuntimeMilliseconds = stopwatch.Elapsed.TotalMilliseconds,
                 ExpandedNodes = expandedNodes,
                 RelaxationCount = relaxationCount,
                 HasNegativeCycle = false,
-                Notes = isReachable ? "Optimal path found." : "Target unreachable."
+                Notes = isReachable ? $"Closest Hospital: Vertex {bestHospital}" : "No hospital is reachable."
             };
 
             if (isReachable)
             {
                 var path = new List<int>();
-                int curr = target;
+                int curr = bestHospital;
                 while (curr != -1)
                 {
                     path.Add(curr);
@@ -102,7 +108,7 @@ namespace SmartEmergencyRoutePlanner.Algorithms
                 }
                 path.Reverse();
                 result.Path = path;
-                result.TotalTravelTimeMinutes = dist[target];
+                result.TotalTravelTimeMinutes = bestTime;
             }
             else
             {

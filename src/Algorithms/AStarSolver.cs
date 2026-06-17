@@ -31,12 +31,13 @@ namespace SmartEmergencyRoutePlanner.Algorithms
 
             var targetVertex = graph.GetVertex(target);
 
-            // Heuristic function: straight-line distance divided by max speed, in minutes
+            // To remain admissible under dynamic traffic where the minimum traffic multiplier is 0.8,
+            // we scale the heuristic by 0.8.
             double Heuristic(int u)
             {
                 var uVertex = graph.GetVertex(u);
                 double distKm = Geometry.CalculateEuclideanDistance(uVertex, targetVertex);
-                return (distKm / maxSpeedKmh) * 60.0;
+                return (distKm / maxSpeedKmh) * 60.0 * 0.8;
             }
 
             gScore[source] = 0;
@@ -46,6 +47,7 @@ namespace SmartEmergencyRoutePlanner.Algorithms
             heap.Insert(source, fScore[source]);
 
             int expandedNodes = 0;
+            long relaxationCount = 0;
             bool reached = false;
 
             while (!heap.IsEmpty)
@@ -72,10 +74,14 @@ namespace SmartEmergencyRoutePlanner.Algorithms
 
                 foreach (var edge in graph.GetNeighbors(u))
                 {
+                    // Ignore closed roads
+                    if (edge.IsClosed) continue;
+
+                    relaxationCount++;
                     int v = edge.To;
                     if (visited[v]) continue;
 
-                    double tentativeG = gScore[u] + edge.TravelTimeMinutes;
+                    double tentativeG = gScore[u] + edge.EffectiveTravelTimeMinutes;
                     if (tentativeG < gScore[v])
                     {
                         gScore[v] = tentativeG;
@@ -98,6 +104,7 @@ namespace SmartEmergencyRoutePlanner.Algorithms
                 RuntimeTicks = stopwatch.ElapsedTicks,
                 RuntimeMilliseconds = stopwatch.Elapsed.TotalMilliseconds,
                 ExpandedNodes = expandedNodes,
+                RelaxationCount = relaxationCount,
                 HasNegativeCycle = false,
                 Notes = isReachable ? "Optimal path found using heuristic." : "Target unreachable."
             };
