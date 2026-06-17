@@ -1,0 +1,11 @@
+VertexCount,EdgeCount,Seed,DijkstraMs,AStarMs,BellmanFordMs,DijkstraDistance,AStarDistance,BellmanFordDistance,DijkstraExpandedNodes,AStarExpandedNodes,DijkstraPathLength,AStarPathLength,DijkstraEqualsAStar,DijkstraEqualsBellmanFord,BellmanFordStatus,AStarSpeedup
+100,500,42,0.0287,0.0206,0.0410,132.2772,132.2772,132.2772,70,35,5,5,true,true,Completed,1.3955
+500,2500,42,0.1637,0.0901,0.1980,184.2291,184.2291,184.2291,267,131,7,7,true,true,Completed,1.8172
+1000,5000,42,0.1385,0.0852,0.4404,145.2288,145.2288,145.2288,248,121,9,9,true,true,Completed,1.6252
+5000,25000,42,2.9503,2.9010,N/A,276.1028,276.1028,N/A,4771,3978,5,5,true,true,Skipped (O(VE)),1.0170
+10000,50000,42,6.9581,6.6591,N/A,292.2273,292.2273,N/A,9326,6857,9,9,true,true,Skipped (O(VE)),1.0449
+100,1000,42,0.0285,0.0100,0.0502,78.8102,78.8102,78.8102,65,12,4,4,true,true,Completed,2.8467
+500,5000,42,0.3027,0.3423,0.3454,180.8578,180.8578,180.8578,493,318,7,7,true,true,Completed,0.8843
+1000,10000,42,0.3043,0.1595,0.7068,111.0172,111.0172,111.0172,436,159,5,5,true,true,Completed,1.9082
+5000,50000,42,3.8729,3.0261,N/A,167.8937,167.8937,N/A,4755,2725,7,7,true,true,Skipped (O(VE)),1.2798
+10000,100000,42,13.2475,12.9180,N/A,184.1004,184.1004,N/A,9841,6096,9,9,true,true,Skipped (O(VE)),1.0255

@@ -1,0 +1,105 @@
+==================================================
+       === Smart Emergency Route Planner ===       
+==================================================
+1. Run Small Demo (V = 12, E = 35)
+2. Run Full Benchmark Suite (V = 100 to 10000)
+3. Run Custom Route Test
+4. Exit
+==================================================
+Select menu option (1-4): 1
+
+--- Running Small Demo ---
+Generating synthetic city graph (V = 12, E = 35, Seed = 42)...
+Routing ambulance from Intersection 0 to Hospital Intersection 11...
+
+==================================================
+                DIJKSTRA ALGORITHM                
+==================================================
+Algorithm Name : Dijkstra
+Reachable      : True
+Travel Time    : 101.8236 minutes
+Path Length    : 3 nodes
+Expanded Nodes : 8
+Runtime (ms)   : 1.2509 ms
+Runtime (ticks): 12509 ticks
+Negative Cycle : False
+Path           : 0 -> 10 -> 11
+
+==================================================
+                A* SEARCH ALGORITHM               
+==================================================
+Algorithm Name : A* Search
+Reachable      : True
+Travel Time    : 101.8236 minutes
+Path Length    : 3 nodes
+Expanded Nodes : 5
+Runtime (ms)   : 0.0755 ms
+Runtime (ticks): 755 ticks
+Negative Cycle : False
+Path           : 0 -> 10 -> 11
+
+==================================================
+              BELLMAN-FORD VALIDATOR              
+==================================================
+Algorithm Name : Bellman-Ford
+Reachable      : True
+Travel Time    : 101.8236 minutes
+Path Length    : 3 nodes
+Expanded Nodes : 0
+Runtime (ms)   : 0.0276 ms
+Runtime (ticks): 276 ticks
+Negative Cycle : False
+Path           : 0 -> 10 -> 11
+
+==================================================
+                 CORRECTNESS CHECK                
+==================================================
+Dijkstra Travel Time equals A* Travel Time : True (Diff: 0.00000E+000 min)
+Dijkstra Travel Time equals Bellman-Ford   : True (Diff: 0.00000E+000 min)
+Path Match (Dijkstra vs A*)                : True
+Path Match (Dijkstra vs Bellman-Ford)      : True
+==================================================
+
+==================================================
+       === Smart Emergency Route Planner ===       
+==================================================
+1. Run Small Demo (V = 12, E = 35)
+2. Run Full Benchmark Suite (V = 100 to 10000)
+3. Run Custom Route Test
+4. Exit
+==================================================
+Select menu option (1-4): 2
+
+--- Running Full Benchmark Suite ---
+Initializing Benchmark Runner...
+Performing system JIT warm-up... Done.
+
+==========================================================================================
+                                  RUNNING BENCHMARKS                                      
+==========================================================================================
+Vertices |    Edges |    DijkMs |   AStarMs |     BF-Ms | Speedup | Match A* | Match BF
+------------------------------------------------------------------------------------------
+     100 |      500 |     0.029 |     0.021 |     0.041 |    1.40 |     True |     True
+     500 |     2500 |     0.164 |     0.090 |     0.198 |    1.82 |     True |     True
+    1000 |     5000 |     0.138 |     0.085 |     0.440 |    1.63 |     True |     True
+     5000 |    25000 |     2.950 |     2.901 |   Skipped |    1.02 |     True |     True
+   10000 |    50000 |     6.958 |     6.659 |   Skipped |    1.04 |     True |     True
+     100 |     1000 |     0.028 |     0.010 |     0.050 |    2.85 |     True |     True
+     500 |     5000 |     0.303 |     0.342 |     0.345 |    0.88 |     True |     True
+    1000 |    10000 |     0.304 |     0.159 |     0.707 |    1.91 |     True |     True
+    5000 |    50000 |     3.873 |     3.026 |   Skipped |    1.28 |     True |     True
+   10000 |   100000 |    13.248 |    12.918 |   Skipped |    1.03 |     True |     True
+==========================================================================================
+Benchmark successfully saved to C:\Users\marco\Documents\Sourcecode\Smart-Emergency-Route-Planner\bench\benchmark_results.csv
+
+==================================================
+       === Smart Emergency Route Planner ===       
+==================================================
+1. Run Small Demo (V = 12, E = 35)
+2. Run Full Benchmark Suite (V = 100 to 10000)
+3. Run Custom Route Test
+4. Exit
+==================================================
+Select menu option (1-4): 4
+
+Thank you for using Smart Emergency Route Planner. Exiting...
