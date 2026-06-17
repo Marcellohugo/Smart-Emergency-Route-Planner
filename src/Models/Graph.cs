@@ -8,6 +8,7 @@ namespace SmartEmergencyRoutePlanner.Models
         public int VertexCount { get; private set; }
         public List<Vertex> Vertices { get; private set; }
         public List<Edge>[] AdjacencyList { get; private set; }
+        public List<Edge>[] ReverseAdjacencyList { get; private set; }
         public List<Edge> AllEdges { get; private set; }
         
         private readonly Dictionary<int, Vertex> _vertexMap;
@@ -17,9 +18,11 @@ namespace SmartEmergencyRoutePlanner.Models
             VertexCount = vertexCount;
             Vertices = new List<Vertex>(vertexCount);
             AdjacencyList = new List<Edge>[vertexCount];
+            ReverseAdjacencyList = new List<Edge>[vertexCount];
             for (int i = 0; i < vertexCount; i++)
             {
                 AdjacencyList[i] = new List<Edge>();
+                ReverseAdjacencyList[i] = new List<Edge>();
             }
             AllEdges = new List<Edge>();
             _vertexMap = new Dictionary<int, Vertex>(vertexCount);
@@ -31,7 +34,7 @@ namespace SmartEmergencyRoutePlanner.Models
             _vertexMap[vertex.Id] = vertex;
         }
 
-        public void AddEdge(int from, int to, double distanceKm, double speedKmh)
+        public Edge AddEdge(int from, int to, double distanceKm, double speedKmh)
         {
             if (from < 0 || from >= VertexCount || to < 0 || to >= VertexCount)
             {
@@ -40,7 +43,9 @@ namespace SmartEmergencyRoutePlanner.Models
 
             var edge = new Edge(from, to, distanceKm, speedKmh);
             AdjacencyList[from].Add(edge);
+            ReverseAdjacencyList[to].Add(edge);
             AllEdges.Add(edge);
+            return edge;
         }
 
         public List<Edge> GetNeighbors(int vertexId)

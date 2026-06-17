@@ -7,7 +7,7 @@ namespace SmartEmergencyRoutePlanner.Utilities
     public static class CsvWriter
     {
         /// <summary>
-        /// Writes advanced benchmark results to a CSV file.
+        /// Writes advanced phase 2 benchmark results to a CSV file.
         /// </summary>
         public static void WriteResults(string filePath, List<BenchmarkResult> results)
         {
@@ -19,12 +19,26 @@ namespace SmartEmergencyRoutePlanner.Utilities
 
             using (var writer = new StreamWriter(filePath, false))
             {
-                // Detailed headers mapping to all new parameters
-                writer.WriteLine("GraphFamily,VertexCount,EdgeCount,Seed,DijkstraAvgMs,DijkstraMinMs,DijkstraMaxMs,AStarAvgMs,AStarMinMs,AStarMaxMs,BellmanFordAvgMs,BellmanFordStatus,DijkstraDistance,AStarDistance,DijkstraExpandedNodes,AStarExpandedNodes,DijkstraRelaxations,AStarRelaxations,DijkstraPathLength,AStarPathLength,SameDistance,DistanceDifference,AStarSpeedup,ExpandedNodeReductionPercent");
+                // Write detailed headers mapping to all new parameters including memory
+                writer.WriteLine("GraphFamily,VertexCount,EdgeCount,Seed," +
+                                 "DijkstraAvgMs,DijkstraMinMs,DijkstraMaxMs," +
+                                 "AStarAvgMs,AStarMinMs,AStarMaxMs," +
+                                 "BiDijkstraAvgMs,BiDijkstraMinMs,BiDijkstraMaxMs," +
+                                 "BellmanFordAvgMs,BellmanFordMinMs,BellmanFordMaxMs,BellmanFordStatus," +
+                                 "DijkstraDistance,AStarDistance,BiDijkstraDistance,BellmanFordDistance," +
+                                 "DijkstraExpandedNodes,AStarExpandedNodes,BiDijkstraExpandedNodes," +
+                                 "DijkstraRelaxations,AStarRelaxations,BiDijkstraRelaxations," +
+                                 "DijkstraPathLength,AStarPathLength,BiDijkstraPathLength," +
+                                 "SameDistance,DistanceDifference,BiDijkstraEqualsDijkstra," +
+                                 "AStarSpeedup,BiDijkstraSpeedup,ExpandedNodeReductionPercent," +
+                                 "DijkstraMemoryBytes,AStarMemoryBytes,BiDijkstraMemoryBytes,BellmanFordMemoryBytes");
                 
                 foreach (var res in results)
                 {
                     string bfAvgMsStr = res.BellmanFordAvgMs.HasValue ? res.BellmanFordAvgMs.Value.ToString("F4") : "N/A";
+                    string bfMinMsStr = res.BellmanFordMinMs.HasValue ? res.BellmanFordMinMs.Value.ToString("F4") : "N/A";
+                    string bfMaxMsStr = res.BellmanFordMaxMs.HasValue ? res.BellmanFordMaxMs.Value.ToString("F4") : "N/A";
+                    string bfDistStr = res.BellmanFordDistance.HasValue ? res.BellmanFordDistance.Value.ToString("F4") : "N/A";
 
                     writer.WriteLine($"{res.Family}," +
                                      $"{res.VertexCount}," +
@@ -36,20 +50,36 @@ namespace SmartEmergencyRoutePlanner.Utilities
                                      $"{res.AStarAvgMs:F4}," +
                                      $"{res.AStarMinMs:F4}," +
                                      $"{res.AStarMaxMs:F4}," +
+                                     $"{res.BiDijkstraAvgMs:F4}," +
+                                     $"{res.BiDijkstraMinMs:F4}," +
+                                     $"{res.BiDijkstraMaxMs:F4}," +
                                      $"{bfAvgMsStr}," +
+                                     $"{bfMinMsStr}," +
+                                     $"{bfMaxMsStr}," +
                                      $"{res.BellmanFordStatus}," +
                                      $"{res.DijkstraDistance:F4}," +
                                      $"{res.AStarDistance:F4}," +
+                                     $"{res.BiDijkstraDistance:F4}," +
+                                     $"{bfDistStr}," +
                                      $"{res.DijkstraExpandedNodes}," +
                                      $"{res.AStarExpandedNodes}," +
+                                     $"{res.BiDijkstraExpandedNodes}," +
                                      $"{res.DijkstraRelaxations}," +
                                      $"{res.AStarRelaxations}," +
+                                     $"{res.BiDijkstraRelaxations}," +
                                      $"{res.DijkstraPathLength}," +
                                      $"{res.AStarPathLength}," +
+                                     $"{res.BiDijkstraPathLength}," +
                                      $"{res.SameDistance.ToString().ToLower()}," +
                                      $"{res.DistanceDifference:F4}," +
+                                     $"{res.BiDijkstraEqualsDijkstra.ToString().ToLower()}," +
                                      $"{res.AStarSpeedup:F4}," +
-                                     $"{res.ExpandedNodeReductionPercent:F2}");
+                                     $"{res.BiDijkstraSpeedup:F4}," +
+                                     $"{res.ExpandedNodeReductionPercent:F2}," +
+                                     $"{res.DijkstraMemoryBytes}," +
+                                     $"{res.AStarMemoryBytes}," +
+                                     $"{res.BiDijkstraMemoryBytes}," +
+                                     $"{res.BellmanFordMemoryBytes}");
                 }
             }
         }

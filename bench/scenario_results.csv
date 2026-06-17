@@ -1,0 +1,14 @@
+ScenarioName,VertexCount,EdgeCount,Algorithm,TravelTime,RuntimeMs,ExpandedNodes,PathLength,Reachable
+1. Normal Condition,1000,10000,Dijkstra,72.6582,0.6841,793,11,true
+1. Normal Condition,1000,10000,A* Search,72.6582,0.2743,268,11,true
+2. 5% Road Closure,1000,10000,Dijkstra,72.6582,0.5845,785,11,true
+2. 5% Road Closure,1000,10000,A* Search,72.6582,0.2737,261,11,true
+3. 10% Road Closure,1000,10000,Dijkstra,72.6582,0.6968,783,11,true
+3. 10% Road Closure,1000,10000,A* Search,72.6582,0.3031,256,11,true
+4. High Traffic,1000,10000,Dijkstra,108.9873,0.6994,793,11,true
+4. High Traffic,1000,10000,A* Search,108.9873,0.4302,456,11,true
+5. Severe Traffic,1000,10000,Dijkstra,181.6455,0.5979,793,11,true
+5. Severe Traffic,1000,10000,A* Search,181.6455,0.8125,588,11,true
+6. Emergency priority lane,1000,10000,Dijkstra,59.3599,0.8613,967,10,true
+6. Emergency priority lane,1000,10000,A* Search,59.3599,0.5601,571,10,true
+7. Robust Route Mode,1000,10000,Robust Dijk,73.0992,0.5653,759,8,true

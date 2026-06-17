@@ -1,6 +1,6 @@
 # Smart Emergency Route Planner: Comparing Dijkstra and A* Search with Bellman-Ford Validation
 
-A high-performance C# Console Application designed to model, solve, and analyze the single-source shortest path problem (SSSP) on synthetic urban road networks. The system computes the fastest route for emergency vehicles (e.g., ambulances) from a dispatch hub to a target hospital. 
+A high-performance C# Console Application designed to model, solve, and analyze the single-source shortest path problem (SSSP) on synthetic urban road networks. The system computes the fastest route for emergency vehicles (e.g., ambulances) from a dispatch hub to a target hospital.
 
 This project was built from scratch without external graph or pathfinding libraries to satisfy the academic requirements of the **Design & Analysis of Algorithms** course.
 
@@ -8,7 +8,7 @@ This project was built from scratch without external graph or pathfinding librar
 
 ## 1. Problem Background & Real-World Motivation
 
-In emergency services, every second counts. Finding the fastest route for an ambulance through an urban network can mean the difference between life and death. Traditional navigation services often rely on static pathfinding or proprietary black-box engines. 
+In emergency services, every second counts. Finding the fastest route for an ambulance through an urban network can mean the difference between life and death. Traditional navigation services often rely on static pathfinding or proprietary black-box engines.
 
 This project models a city road network as a weighted directed graph, where edges represent road segments with varying speed limits and lengths. Instead of routing by shortest distance (which may lead through slow, congested residential streets), the planner routes by **shortest travel time** (in minutes) to simulate emergency vehicle behavior.
 
@@ -16,115 +16,121 @@ This project models a city road network as a weighted directed graph, where edge
 
 ## 2. Advanced Project Features
 
-To elevate this project beyond standard shortest-path implementations, the following advanced features are integrated:
-
 ### 2.1 Road Closure Simulation
 Emergency situations often involve road closures due to accidents, flooding, or construction. The graph supports toggling edges active or inactive ($E_{\text{active}} \subseteq E$). Dijkstra, A*, and Bellman-Ford solvers dynamically bypass closed edges.
 *   **Key Graph Methods:** `CloseEdge(from, to)`, `OpenEdge(from, to)`, `CloseRandomEdges(rate, seed)`, and `ResetClosures()`.
 
-### 2.2 Traffic Condition Modifier
-Urban traffic is highly dynamic. The project incorporates traffic levels (`Low`, `Normal`, `High`, `Severe`) which scale the edge traversal weights:
-*   **Traffic Multipliers:** Low ($0.8\times$), Normal ($1.0\times$), High ($1.5\times$), Severe ($2.5\times$).
-*   **Dynamic Weight Formula:** 
-    $$\text{EffectiveTravelTimeMinutes}(e) = \text{TravelTimeMinutes}(e) \times \text{TrafficMultiplier}(e)$$
-*   **Key Graph Methods:** `ApplyRandomTraffic(seed)` and `ResetTraffic()`.
+### 2.2 Traffic Condition Modifier & Time-Dependent Traffic
+*   **Dynamic Traffic Congestion Levels:** Supports traffic levels (`Low`, `Normal`, `High`, `Severe`) which scale edge traversal weights:
+    *   **Traffic Multipliers:** Low ($0.8\times$), Normal ($1.0\times$), High ($1.5\times$), Severe ($2.5\times$).
+*   **Departure Time-Periods:** Incorporates time periods (`MorningRush`, `Midday`, `EveningRush`, `Night`):
+    *   **Time Period Multipliers:** MorningRush ($1.8\times$), Midday ($1.0\times$), EveningRush ($2.0\times$), Night ($0.7\times$).
+*   **Dynamic Weight Formula:**
+    $$\text{EffectiveTravelTimeMinutes}(e) = \text{TravelTimeMinutes}(e) \times \text{TrafficMultiplier}(e) \times \text{TimePeriodMultiplier}(e)$$
 
-### 2.3 Multi-Hospital Nearest Route Mode
-In many emergencies, the ambulance does not have a fixed target hospital. Instead, it must route to the **nearest available hospital** from a list of candidates.
+### 2.3 Emergency Priority Lane
+Ambulances can utilize designated lanes to bypass traffic congestion.
+*   **Emergency Lane Multiplier:** Edges marked with `HasEmergencyLane = true` receive a $0.6\times$ discount when emergency mode is active.
+*   **Weight Calculation:**
+    $$\text{Weight}(e) = \text{EffectiveTravelTimeMinutes}(e) \times 0.6 \quad (\text{if emergencyMode is active and } HasEmergencyLane)$$
+
+### 2.4 Multi-Hospital Nearest Route Mode
+Ambulances can find the closest hospital from a list of target candidate locations.
 *   **Dijkstra Multi-Target Solver:** Executes Dijkstra once from the source to solve the SSSP to all nodes, then identifies the hospital with the shortest travel time. Highly efficient for multiple targets ($O((V+E)\log V)$ total).
-*   **A\* Multi-Target Solver:** Executes A* iteratively to each target hospital. Extremely fast for a single target, but total work scales linearly with the number of hospitals ($O(k \cdot (V+E)\log V)$).
+*   **A\* Multi-Target Solver:** Executes A* iteratively to each target hospital. Fast for a single target, but total work scales linearly with target count ($O(k \cdot (V+E)\log V)$).
 
-### 2.4 Multiple Graph Families
+### 2.5 Bidirectional Dijkstra Solver
+Speeds up single-source single-target queries. Runs two simultaneous Dijkstra priority queues from the source (forward) and target (backward).
+*   **Reverse Graph:** Uses `ReverseAdjacencyList` where `ReverseAdjacencyList[to]` stores incoming edges to `to`.
+*   **Stopping Criterion:** Terminated early when `minForward + minBackward >= bestDistance` is met.
+
+### 2.6 Alternative Route Planning (K-Shortest Paths)
+*   **Repeated Penalty Heuristic:** Runs Dijkstra repeatedly, applying a $2.0\times$ penalty factor to edges utilized in prior paths. Calculates overlap percentage relative to the primary route.
+*   **Yen's Exact Algorithm:** Dynamically disables spur edges and root path nodes to identify the exact K-shortest loopless paths.
+
+### 2.7 Robust Risk-Aware Routing
+*   Balances time and safety. Edges are assigned `ClosureRisk` ($[0.0, 0.1]$) and `TrafficRisk` ($[0.0, 0.3]$).
+*   **Robust Weight Formula:**
+    $$\text{RobustWeight}(e) = \text{TravelTime}(e) + \lambda \times (\text{ClosureRisk}(e) + \text{TrafficRisk}(e))$$
+*   Trades off distance for a significantly safer, less congested path.
+
+### 2.8 Multiple Graph Families
 Benchmarks evaluate algorithms across two distinct structural network models:
 *   **RandomSparse:** A highly randomized network layout with $E \approx 5V$.
 *   **GridCity:** A structured 2D grid resembling real city planning. Nodes are connected to horizontal/vertical grid neighbors and organic diagonal avenues, providing a highly informative spatial layout for A*'s heuristic.
 
 ---
 
-## 3. Formal Mathematical Model
+## 3. Analytical & Validation Frameworks
 
-The urban street network is modeled as a weighted directed graph $G = (V, E)$, defined as follows:
+### 3.1 Self-Contained Correctness Test Suite
+Run the suite (CLI Option 11) to execute 7 unit tests covering:
+1. Simple 5-vertex graph path validation
+2. Disconnected graph handling
+3. Multiple equal-cost paths
+4. Road closures re-routing
+5. Traffic modifier shifts
+6. Bellman-Ford negative cycle detection
+7. Dijkstra vs. A* consistency checks
 
-*   **Vertices ($V$):** A set of vertices representing street intersections, landmark locations, or routing hubs. Each vertex $v \in V$ is positioned on a 2D Cartesian plane with coordinates $(X_v, Y_v)$ in a $100 \times 100$ km city grid.
-*   **Edges ($E$):** A set of directed edges representing road segments. Each edge $e = (u, v) \in E$ goes from intersection $u$ to intersection $v$.
-*   **Edge Weight ($w'(e)$):** The weight of an edge represents the effective travel time in minutes, incorporating traffic conditions:
-    $$w'(e) = \text{EffectiveTravelTimeMinutes}(e) = \left( \frac{\text{DistanceKm}(e)}{\text{SpeedKmh}(e)} \right) \times 60 \times \text{TrafficMultiplier}(e)$$
-    Where $\text{DistanceKm}(e)$ is the Euclidean distance between $u$ and $v$ in kilometers, and $\text{SpeedKmh}(e) \in [20, 100]$ represents the road segment's speed limit in km/h.
-*   **Source ($s \in V$):** The start vertex (ambulance starting point), designated as Vertex `0`.
-*   **Target ($t \in V$):** The destination vertex (central hospital), designated as Vertex `V - 1`.
-*   **Objective:** Find a directed path $P = (v_0, v_1, \dots, v_k)$ from $v_0 = s$ to $v_k = t$ along active edges ($E_{\text{active}}$) that minimizes the sum of effective travel times:
-    $$\min \sum_{i=0}^{k-1} w'(v_i, v_{i+1})$$
+### 3.2 Log-log Empirical Growth Regression
+Determines the empirical growth exponent ($b$) in the runtime model $T(V) = a \cdot V^b$.
+*   Uses a least-squares linear regression: $\ln(\text{runtime}) = \ln(a) + b \ln(V)$ to calculate and print $b$ for all solvers.
 
----
+### 3.3 Memory Usage Profiling
+Captures memory consumption using `GC.GetTotalMemory(true)` immediately before and after solver execution, saving the allocated bytes directly to CSV.
 
-## 4. Algorithm Overview
-
-### Dijkstra's Algorithm
-Dijkstra's algorithm finds the exact shortest path from a single source to all other vertices on a graph with non-negative weights. It runs in $O((V + E) \log V)$ time using our custom Binary Min-Heap.
-*   **Invariant:** Once a vertex is extracted from the priority queue, its shortest distance from the source is finalized.
-*   **Optimization:** Stops early as soon as the target vertex is extracted.
-
-### A* Search Algorithm
-A* improves upon Dijkstra by incorporating a heuristic to guide the search towards the target. It runs in $O((V + E) \log V)$ worst-case time, but expands fewer vertices in practice.
-*   **Priority Metric:** $f(v) = g(v) + h(v)$
-    *   $g(v)$ is the exact travel time from the source to vertex $v$.
-    *   $h(v)$ is the estimated travel time from $v$ to the target.
-*   **Heuristic Definition:** Straight-line Euclidean distance over maximum possible speed, scaled by the minimum traffic multiplier ($0.8\times$) to ensure admissibility:
-    $$h(v, t) = 0.8 \times \left( \frac{\text{EuclideanDistance}(v, t)}{\text{MaxSpeedKmh}} \times 60 \right)$$
-*   **Admissibility & Consistency:** Since speed limits are bounded by $\text{MaxSpeedKmh} = 100.0$ km/h and traffic multipliers are bounded by $\text{MinMultiplier} = 0.8$, the straight-line travel time at max speed with minimum traffic represents the absolute physical lower bound of travel time. Therefore, $h(v, t)$ never overestimates the actual remaining cost (admissible) and satisfies the triangle inequality (consistent), guaranteeing that A* finds the optimal shortest path.
-
-### Bellman-Ford Validator
-A slower dynamic programming shortest-path algorithm running in $O(V \cdot E)$ time. It relaxes all edges $V-1$ times and detects negative weight cycles.
-*   **Role:** Used as an independent correctness validator for small-to-medium graphs ($V \le 1000$). For larger graphs, it is skipped to prevent severe benchmark slowdowns.
+### 3.4 Graphviz DOT Exporter
+Generates a `docs/graph_demo.dot` file showing vertices (source is green, target is red, path is yellow) and edges (thick dark-green path edges, dashed red closed edges).
 
 ---
 
-## 5. Key Data Structures
-
-*   **Adjacency List:** The graph $G$ is represented using an array of edge lists `List<Edge>[]` to enable efficient $O(1)$ neighbor traversal.
-*   **Custom Binary Min-Heap:** An array-based binary min-heap implemented from scratch in `BinaryMinHeap.cs`. To avoid the overhead of index-tracking for a standard `DecreaseKey` operation, we use the **duplicate insertion with lazy deletion** approach:
-    *   When a shorter distance to vertex $v$ is discovered, a new node `(v, new_distance)` is inserted.
-    *   Upon extraction, if the node's priority is greater than the current recorded distance of $v$, the node is discarded as a stale entry.
-*   **Lookup Tables:** Auxiliary arrays for tracking distances, parent paths (for reconstruction), and visited statuses.
-
----
-
-## 6. Repository Structure
+## 4. Repository Structure
 
 ```
 SmartEmergencyRoutePlanner/
 ├── src/
 │   ├── Models/
-│   │   ├── Edge.cs                  # Edge representation with closures and traffic
+│   │   ├── Edge.cs                  # Edge representation with GetWeight()
 │   │   ├── Vertex.cs                # Coordinates and naming details
-│   │   ├── Graph.cs                 # Graph structure with closures/traffic methods
-│   │   ├── PathResult.cs            # Solver output container with relaxation counter
+│   │   ├── Graph.cs                 # Graph structure with ReverseAdjacencyList
+│   │   ├── PathResult.cs            # Solver output container
 │   │   └── TrafficLevel.cs          # Enum for low, normal, high, severe congestion
 │   ├── DataStructures/
-│   │   └── BinaryMinHeap.cs         # Custom array-backed min priority queue
+│   │   └── BinaryMinHeap.cs         # Custom priority queue with Peek() method
 │   ├── Algorithms/
 │   │   ├── DijkstraSolver.cs        # Dijkstra algorithm (from scratch)
 │   │   ├── AStarSolver.cs           # A* algorithm (from scratch)
 │   │   ├── BellmanFordSolver.cs     # Bellman-Ford validator (from scratch)
 │   │   ├── DijkstraMultiTargetSolver.cs # Single-source multi-hospital solver
-│   │   └── AStarMultiTargetSolver.cs    # Multi-run A* multi-hospital solver
+│   │   ├── AStarMultiTargetSolver.cs    # Multi-run A* multi-hospital solver
+│   │   ├── BidirectionalDijkstraSolver.cs # Bi-directional Dijkstra search
+│   │   ├── AlternativeRouteSolver.cs    # Penalty-based alternatives
+│   │   ├── YenKShortestPathsSolver.cs   # Yen's Exact K-shortest loopless paths
+│   │   └── RobustRouteSolver.cs         # Risk-aware solver
 │   ├── Generators/
 │   │   ├── GraphFamily.cs           # Enum for RandomSparse, RandomMedium, GridCity
 │   │   └── CityGraphGenerator.cs    # Multi-family urban network builder
 │   ├── Benchmark/
 │   │   ├── BenchmarkCase.cs         # Size configuration (V, E, seed)
-│   │   ├── BenchmarkResult.cs       # Metrics storage with Min/Max/Avg and checks
-│   │   └── BenchmarkRunner.cs       # Coordinates 5-run evaluations
+│   │   ├── BenchmarkResult.cs       # Metrics storage with timing stats and memory
+│   │   └── BenchmarkRunner.cs       # Coordinates benchmarks and scenario matrices
+│   ├── Analysis/
+│   │   └── EmpiricalGrowthAnalyzer.cs   # Fits regression exponents
 │   ├── Utilities/
 │   │   ├── CsvWriter.cs             # CSV file generator
-│   │   ├── PathFormatter.cs         # Path print detailed route explainer
-│   │   └── Geometry.cs              # Euclidean distance calculations
-│   └── Program.cs                   # Interactive 7-option CLI menu
+│   │   ├── PathFormatter.cs         # Detailed route explainer
+│   │   └── GraphVizExporter.cs      # Graphviz DOT exporter
+│   ├── Tests/
+│   │   └── AlgorithmCorrectnessTests.cs # 7-case correctness suite
+│   └── Program.cs                   # Interactive 14-option CLI menu
 ├── bench/
-│   └── benchmark_results.csv        # Output CSV containing raw benchmark results
+│   ├── benchmark_results.csv        # Consolidated timing and memory benchmark report
+│   └── scenario_results.csv         # Matrix experiment results
 ├── docs/
 │   ├── screenshots/                 # Folder for application execution captures
 │   ├── architecture_diagram.md      # Mermaid specification of the system architecture
+│   ├── graph_demo.dot               # Graphviz DOT output file
 │   └── sample_output.txt            # Console output logs
 ├── README.md                        # Project instruction manual (This file)
 ├── Report_Outline.md                # Comprehensive outline for academic report
@@ -133,13 +139,13 @@ SmartEmergencyRoutePlanner/
 
 ---
 
-## 7. Getting Started
+## 5. Getting Started
 
 ### Prerequisites
 *   .NET 10.0 SDK or .NET 8.0 SDK installed on your system.
 
 ### How to Build
-Open a terminal (Command Prompt, PowerShell, or bash) in the repository root folder and run:
+Open a terminal in the repository root folder and run:
 ```bash
 dotnet build
 ```
@@ -152,37 +158,31 @@ dotnet run --project SmartEmergencyRoutePlanner.csproj
 
 ---
 
-## 8. How to Run Benchmarks & Reproduce Results
+## 6. How to Run Benchmarks & Reproduce Results
 
 1.  Start the program using `dotnet run --project SmartEmergencyRoutePlanner.csproj`.
 2.  Choose option **`2. Run Full Benchmark Suite`** from the interactive menu.
 3.  The program will run the solvers on 10 configurations spanning two families: **RandomSparse ($E \approx 5V$)** and **GridCity ($E \approx 10V$)**.
-4.  Each solver is run **5 times** per case (after a warm-up execution) to calculate:
-    *   **Average Runtime (`AvgMs`)**
-    *   **Minimum Runtime (`MinMs`)**
-    *   **Maximum Runtime (`MaxMs`)**
-5.  A consolidated copy-pasteable table will print to the console, and the detailed breakdown will be written to `bench/benchmark_results.csv`.
-
-### Reproducibility Parameters
-*   **Seed:** Standardized to seed `42` to ensure the exact same city coordinates and speeds are generated across all runs.
-*   **Source / Target:** Source is always Vertex `0`, and Target is always Vertex `V - 1`.
-*   **Backbone Path:** A deterministic path is constructed initially to guarantee that the destination is reachable.
+4.  Each solver is run **5 times** per case (after JIT warm-up) to calculate Min, Max, and Average Ms, GC memory, and regression slope exponents.
+5.  Results are saved to `bench/benchmark_results.csv`.
+6.  Choose option **`13. Run Scenario Comparison Matrix`** to run matrix tests and output `bench/scenario_results.csv`.
 
 ---
 
-## 9. Analyzing Results and Plotting
+## 7. Rendering Graphviz Visualizations
 
-The output CSV file `bench/benchmark_results.csv` contains the raw measurements. To create evaluation plots:
-1.  Open `bench/benchmark_results.csv` in Excel, Google Sheets, or python (Pandas/Matplotlib).
-2.  Create the following plots:
-    *   **Runtime vs. Vertices:** Line chart plotting `DijkstraAvgMs` and `AStarAvgMs` (Y-axis) against `VertexCount` (X-axis) for both Sparse and GridCity families.
-    *   **Expanded Nodes vs. Vertices:** Line chart plotting `DijkstraExpandedNodes` and `AStarExpandedNodes` (Y-axis) against `VertexCount` (X-axis).
-    *   **Relaxation count vs. Vertices:** Chart comparing the relaxation operations to illustrate the practical work against theoretical complexities.
-    *   **Speedup Ratio:** Plot the speedup ratio `AStarSpeedup` across graph sizes to visualize A*'s heuristic efficiency.
+To render `docs/graph_demo.dot`:
+1.  Run option **`12. Export Demo Graph to DOT`** from the CLI menu.
+2.  Open `docs/graph_demo.dot` and paste its content to an online viewer such as [Graphviz Online](https://dreampuf.github.io/GraphvizOnline/).
+3.  Alternatively, if you have Graphviz installed locally, compile via terminal:
+    ```bash
+    dot -Tpng docs/graph_demo.dot -o docs/graph_demo.png
+    ```
+4.  The output PNG will show highlighted path edges and closed road segments.
 
 ---
 
-## 10. Academic Integrity and Project Team
+## 8. Academic Integrity and Project Team
 
 We pledge that the code and documentation in this repository have been written entirely by our team members. No external library code has been integrated into the core pathfinding algorithms.
 

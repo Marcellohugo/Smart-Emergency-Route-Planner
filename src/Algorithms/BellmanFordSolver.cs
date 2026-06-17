@@ -10,7 +10,7 @@ namespace SmartEmergencyRoutePlanner.Algorithms
         /// <summary>
         /// Solves the shortest path problem using the Bellman-Ford algorithm.
         /// </summary>
-        public PathResult Solve(Graph graph, int source, int target)
+        public PathResult Solve(Graph graph, int source, int target, bool emergencyMode = false)
         {
             var stopwatch = Stopwatch.StartNew();
 
@@ -34,13 +34,12 @@ namespace SmartEmergencyRoutePlanner.Algorithms
                 bool relaxedAny = false;
                 foreach (var edge in graph.AllEdges)
                 {
-                    // Ignore closed roads
                     if (edge.IsClosed) continue;
 
                     relaxationCount++;
                     int u = edge.From;
                     int v = edge.To;
-                    double weight = edge.EffectiveTravelTimeMinutes;
+                    double weight = edge.GetWeight(emergencyMode);
 
                     if (dist[u] < double.PositiveInfinity && dist[u] + weight < dist[v])
                     {
@@ -60,13 +59,12 @@ namespace SmartEmergencyRoutePlanner.Algorithms
             // Check for negative weight cycles
             foreach (var edge in graph.AllEdges)
             {
-                // Ignore closed roads
                 if (edge.IsClosed) continue;
 
                 relaxationCount++;
                 int u = edge.From;
                 int v = edge.To;
-                double weight = edge.EffectiveTravelTimeMinutes;
+                double weight = edge.GetWeight(emergencyMode);
 
                 if (dist[u] < double.PositiveInfinity && dist[u] + weight < dist[v])
                 {
@@ -85,7 +83,7 @@ namespace SmartEmergencyRoutePlanner.Algorithms
                 IsReachable = isReachable,
                 RuntimeTicks = stopwatch.ElapsedTicks,
                 RuntimeMilliseconds = stopwatch.Elapsed.TotalMilliseconds,
-                ExpandedNodes = 0, // Bellman-Ford relaxes edges, no node queue expansion
+                ExpandedNodes = 0,
                 RelaxationCount = relaxationCount,
                 HasNegativeCycle = hasNegativeCycle,
                 Notes = hasNegativeCycle ? "Negative cycle detected!" : (isReachable ? "Optimal path found." : "Target unreachable.")

@@ -5,6 +5,7 @@ using SmartEmergencyRoutePlanner.Algorithms;
 using SmartEmergencyRoutePlanner.Benchmark;
 using SmartEmergencyRoutePlanner.Generators;
 using SmartEmergencyRoutePlanner.Models;
+using SmartEmergencyRoutePlanner.Tests;
 using SmartEmergencyRoutePlanner.Utilities;
 
 namespace SmartEmergencyRoutePlanner
@@ -28,9 +29,16 @@ namespace SmartEmergencyRoutePlanner
                 Console.WriteLine("4. Run Road Closure Scenario (5% closures)");
                 Console.WriteLine("5. Run Traffic Modifier Scenario (Low to Severe)");
                 Console.WriteLine("6. Run Nearest Hospital Scenario (Multi-Hospital)");
-                Console.WriteLine("7. Exit");
+                Console.WriteLine("7. Run Bidirectional Dijkstra Comparison");
+                Console.WriteLine("8. Run Alternative Routes (Penalty Heuristic vs Yen's Exact)");
+                Console.WriteLine("9. Run Emergency Priority Lane Scenario");
+                Console.WriteLine("10. Run Robust Route Scenario (Risk-Aware)");
+                Console.WriteLine("11. Run Correctness Unit Tests");
+                Console.WriteLine("12. Export Demo Graph to DOT (Graphviz)");
+                Console.WriteLine("13. Run Scenario Comparison Matrix");
+                Console.WriteLine("14. Exit");
                 Console.WriteLine("==================================================");
-                Console.Write("Select menu option (1-7): ");
+                Console.Write("Select menu option (1-14): ");
 
                 string? choice = Console.ReadLine();
                 switch (choice)
@@ -54,12 +62,33 @@ namespace SmartEmergencyRoutePlanner
                         RunNearestHospitalScenario();
                         break;
                     case "7":
+                        RunBidirectionalDijkstraComparison();
+                        break;
+                    case "8":
+                        RunAlternativeRoutesScenario();
+                        break;
+                    case "9":
+                        RunEmergencyLaneScenario();
+                        break;
+                    case "10":
+                        RunRobustRouteScenario();
+                        break;
+                    case "11":
+                        AlgorithmCorrectnessTests.RunSuite();
+                        break;
+                    case "12":
+                        ExportDemoGraphToDot();
+                        break;
+                    case "13":
+                        RunScenarioComparisonMatrix();
+                        break;
+                    case "14":
                         running = false;
                         Console.WriteLine("Thank you for using Smart Emergency Route Planner. Exiting...");
                         break;
                     default:
                         Console.ForegroundColor = ConsoleColor.Red;
-                        Console.WriteLine("Invalid option. Please enter a number between 1 and 7.");
+                        Console.WriteLine("Invalid option. Please enter a number between 1 and 14.");
                         Console.ResetColor();
                         break;
                 }
@@ -201,37 +230,28 @@ namespace SmartEmergencyRoutePlanner
             var graph = CityGraphGenerator.Generate(V, E, seed, GraphFamily.GridCity);
 
             var dijkstra = new DijkstraSolver();
-            var astar = new AStarSolver();
 
-            // Run Normal Pathfinding
-            var normalDijkstra = dijkstra.Solve(graph, source, target);
-            var normalAStar = astar.Solve(graph, source, target, 100.0);
+            var normalResult = dijkstra.Solve(graph, source, target);
 
-            // Apply 5% Closures
             double closureRate = 0.05;
             Console.WriteLine($"\nSimulating 5% road closures (closing {(int)(graph.AllEdges.Count * closureRate)} edges randomly)...");
             graph.CloseRandomEdges(closureRate, seed);
 
-            // Run Pathfinding under Closure Condition
-            var closedDijkstra = dijkstra.Solve(graph, source, target);
-            var closedAStar = astar.Solve(graph, source, target, 100.0);
+            var closedResult = dijkstra.Solve(graph, source, target);
 
             Console.WriteLine("\n==================================================");
             Console.WriteLine("         ROAD CLOSURE SCENARIO COMPARISON         ");
             Console.WriteLine("==================================================");
-            Console.WriteLine($"Normal Travel Time (Dijkstra) : {normalDijkstra.TotalTravelTimeMinutes:F2} min");
-            Console.WriteLine($"Normal Travel Time (A*)       : {normalAStar.TotalTravelTimeMinutes:F2} min");
-            Console.WriteLine($"Normal Path                   : {PathFormatter.Format(normalDijkstra.Path)}");
+            Console.WriteLine($"Normal Travel Time            : {normalResult.TotalTravelTimeMinutes:F2} min");
+            Console.WriteLine($"Normal Path                   : {PathFormatter.Format(normalResult.Path)}");
             Console.WriteLine("--------------------------------------------------");
-            Console.WriteLine($"Post-Closure Travel Time (Dijk) : {(closedDijkstra.IsReachable ? $"{closedDijkstra.TotalTravelTimeMinutes:F2} min" : "Unreachable")}");
-            Console.WriteLine($"Post-Closure Travel Time (A*)   : {(closedAStar.IsReachable ? $"{closedAStar.TotalTravelTimeMinutes:F2} min" : "Unreachable")}");
-            Console.WriteLine($"Post-Closure Path               : {PathFormatter.Format(closedDijkstra.Path)}");
+            Console.WriteLine($"Post-Closure Travel Time      : {(closedResult.IsReachable ? $"{closedResult.TotalTravelTimeMinutes:F2} min" : "Unreachable")}");
+            Console.WriteLine($"Post-Closure Path             : {PathFormatter.Format(closedResult.Path)}");
             Console.WriteLine("--------------------------------------------------");
-            Console.WriteLine($"Is Target Still Reachable?      : {closedDijkstra.IsReachable}");
-            Console.WriteLine($"Did Path Change?                : {!ComparePaths(normalDijkstra.Path, closedDijkstra.Path)}");
+            Console.WriteLine($"Is Target Still Reachable?      : {closedResult.IsReachable}");
+            Console.WriteLine($"Did Path Change?                : {!ComparePaths(normalResult.Path, closedResult.Path)}");
             Console.WriteLine("==================================================");
 
-            // Cleanup
             graph.ResetClosures();
         }
 
@@ -248,34 +268,27 @@ namespace SmartEmergencyRoutePlanner
             var graph = CityGraphGenerator.Generate(V, E, seed, GraphFamily.GridCity);
 
             var dijkstra = new DijkstraSolver();
-            var astar = new AStarSolver();
 
-            // Run Normal Pathfinding
-            var normalDijkstra = dijkstra.Solve(graph, source, target);
-            var normalAStar = astar.Solve(graph, source, target, 100.0);
+            var normalResult = dijkstra.Solve(graph, source, target);
 
-            // Apply Random Traffic congestion levels
             Console.WriteLine("\nApplying dynamic traffic conditions (congestion factors 0.8x to 2.5x)...");
             graph.ApplyRandomTraffic(seed);
 
-            // Run Pathfinding under Dynamic Traffic
-            var trafficDijkstra = dijkstra.Solve(graph, source, target);
-            var trafficAStar = astar.Solve(graph, source, target, 100.0);
+            var trafficResult = dijkstra.Solve(graph, source, target);
 
             Console.WriteLine("\n==================================================");
             Console.WriteLine("            TRAFFIC SCENARIO COMPARISON           ");
             Console.WriteLine("==================================================");
-            Console.WriteLine($"Normal Travel Time            : {normalDijkstra.TotalTravelTimeMinutes:F2} min");
-            Console.WriteLine($"Normal Path                   : {PathFormatter.Format(normalDijkstra.Path)}");
+            Console.WriteLine($"Normal Travel Time            : {normalResult.TotalTravelTimeMinutes:F2} min");
+            Console.WriteLine($"Normal Path                   : {PathFormatter.Format(normalResult.Path)}");
             Console.WriteLine("--------------------------------------------------");
-            Console.WriteLine($"Traffic-Adjusted Travel Time  : {trafficDijkstra.TotalTravelTimeMinutes:F2} min");
-            Console.WriteLine($"Traffic-Adjusted Path         : {PathFormatter.Format(trafficDijkstra.Path)}");
+            Console.WriteLine($"Traffic-Adjusted Travel Time  : {trafficResult.TotalTravelTimeMinutes:F2} min");
+            Console.WriteLine($"Traffic-Adjusted Path         : {PathFormatter.Format(trafficResult.Path)}");
             Console.WriteLine("--------------------------------------------------");
-            Console.WriteLine($"Travel Time Cost Increase     : {trafficDijkstra.TotalTravelTimeMinutes - normalDijkstra.TotalTravelTimeMinutes:F2} min");
-            Console.WriteLine($"Did Route Shift to Bypass Jam?: {!ComparePaths(normalDijkstra.Path, trafficDijkstra.Path)}");
+            Console.WriteLine($"Travel Time Cost Increase     : {trafficResult.TotalTravelTimeMinutes - normalResult.TotalTravelTimeMinutes:F2} min");
+            Console.WriteLine($"Did Route Shift to Bypass Jam?: {!ComparePaths(normalResult.Path, trafficResult.Path)}");
             Console.WriteLine("==================================================");
 
-            // Cleanup
             graph.ResetTraffic();
         }
 
@@ -290,14 +303,13 @@ namespace SmartEmergencyRoutePlanner
             Console.WriteLine($"Generating Graph (GridCity, V = {V}, E = {E}, Seed = {seed})...");
             var graph = CityGraphGenerator.Generate(V, E, seed, GraphFamily.GridCity);
 
-            // Pick 8 candidate hospital vertices deterministically using random
             var random = new Random(seed);
             var hospitals = new List<int>();
             var hospitalSet = new HashSet<int>();
 
             while (hospitals.Count < 8)
             {
-                int h = random.Next(1, V - 1); // Exclude source (0) and standard target (V-1)
+                int h = random.Next(1, V - 1);
                 if (!hospitalSet.Contains(h))
                 {
                     hospitalSet.Add(h);
@@ -310,12 +322,7 @@ namespace SmartEmergencyRoutePlanner
             var dijkstraMT = new DijkstraMultiTargetSolver();
             var astarMT = new AStarMultiTargetSolver();
 
-            // Run Dijkstra Multi-Target (Runs Dijkstra once from source to find best target)
-            Console.WriteLine("Executing Dijkstra Multi-Target (single query to all targets)...");
             var resDijkstra = dijkstraMT.Solve(graph, source, hospitals);
-
-            // Run A* Multi-Target (Runs A* multiple times, once to each target)
-            Console.WriteLine("Executing A* Multi-Target (iterative individual queries)...");
             var resAStar = astarMT.Solve(graph, source, hospitals, 100.0);
 
             Console.WriteLine("\n==================================================");
@@ -337,13 +344,277 @@ namespace SmartEmergencyRoutePlanner
             Console.WriteLine($"A* Multi-Run Total Relaxations    : {resAStar.RelaxationCount}");
             Console.WriteLine($"Dijkstra Solver Execution Time    : {resDijkstra.RuntimeMilliseconds:F3} ms");
             Console.WriteLine($"A* Solver Execution Time          : {resAStar.RuntimeMilliseconds:F3} ms");
-            Console.WriteLine("--------------------------------------------------");
-            Console.WriteLine("TIMING NOTE:");
-            Console.WriteLine("Because Dijkstra solves the SSSP problem (distances to ALL vertices) in one single run,");
-            Console.WriteLine("it remains highly efficient when searching for the nearest of multiple targets.");
-            Console.WriteLine("A* is faster for a SINGLE target, but when queried iteratively for many targets,");
-            Console.WriteLine("its total node expansions and runtimes scale linearly with the target count.");
             Console.WriteLine("==================================================");
+        }
+
+        private static void RunBidirectionalDijkstraComparison()
+        {
+            Console.WriteLine("\n--- Bidirectional Dijkstra Comparison ---");
+            int V = 1000;
+            int E = 10000;
+            int seed = 42;
+            int source = 0;
+            int target = V - 1;
+
+            Console.WriteLine($"Generating Graph (GridCity, V = {V}, E = {E}, Seed = {seed})...");
+            var graph = CityGraphGenerator.Generate(V, E, seed, GraphFamily.GridCity);
+
+            var dijkstra = new DijkstraSolver();
+            var bidijkstra = new BidirectionalDijkstraSolver();
+
+            Console.WriteLine("Executing Standard Dijkstra Solver...");
+            var resD = dijkstra.Solve(graph, source, target);
+
+            Console.WriteLine("Executing Bidirectional Dijkstra Solver...");
+            var resBi = bidijkstra.Solve(graph, source, target);
+
+            Console.WriteLine("\n==================================================");
+            Console.WriteLine("                STANDARD DIJKSTRA                 ");
+            Console.WriteLine("==================================================");
+            Console.WriteLine(PathFormatter.FormatDetailed(resD, source, target));
+
+            Console.WriteLine("==================================================");
+            Console.WriteLine("              BIDIRECTIONAL DIJKSTRA              ");
+            Console.WriteLine("==================================================");
+            Console.WriteLine(PathFormatter.FormatDetailed(resBi, source, target));
+
+            Console.WriteLine("==================================================");
+            Console.WriteLine("           BIDIRECTIONAL EFFICIENCY CHECK         ");
+            Console.WriteLine("==================================================");
+            Console.WriteLine($"Standard Dijkstra Expanded Nodes: {resD.ExpandedNodes}");
+            Console.WriteLine($"Bidirectional Dijkstra Exp Nodes: {resBi.ExpandedNodes}");
+            double nodeSavings = ((double)(resD.ExpandedNodes - resBi.ExpandedNodes) / resD.ExpandedNodes) * 100.0;
+            Console.WriteLine($"Search Space Node Reduction     : {nodeSavings:F1}%");
+            Console.WriteLine($"Standard Dijkstra Relaxations   : {resD.RelaxationCount}");
+            Console.WriteLine($"Bidirectional Dijk Relaxations  : {resBi.RelaxationCount}");
+            Console.WriteLine($"Speedup Ratio (Dijk / BiDijk)   : {resD.RuntimeMilliseconds / resBi.RuntimeMilliseconds:F2}x");
+            Console.WriteLine("==================================================");
+        }
+
+        private static void RunAlternativeRoutesScenario()
+        {
+            Console.WriteLine("\n--- Alternative Routes Generation ---");
+            int V = 100;
+            int E = 500;
+            int seed = 42;
+            int source = 0;
+            int target = V - 1;
+
+            Console.WriteLine($"Generating Graph (GridCity, V = {V}, E = {E}, Seed = {seed})...");
+            var graph = CityGraphGenerator.Generate(V, E, seed, GraphFamily.GridCity);
+
+            // 1. Repeated Penalty Alternative Routes
+            Console.WriteLine("\nFinding alternative paths using Repeated Penalty Heuristic...");
+            var penaltySolver = new AlternativeRouteSolver();
+            var penaltyPaths = penaltySolver.FindAlternativeRoutes(graph, source, target, 3);
+
+            // 2. Yen's Exact K-Shortest Paths
+            Console.WriteLine("Finding alternative paths using Yen's Exact Algorithm...");
+            var yenSolver = new YenKShortestPathsSolver();
+            var yenPaths = yenSolver.FindKShortestPaths(graph, source, target, 3);
+
+            Console.WriteLine("\n==================================================================================");
+            Console.WriteLine("                      REPEATED PENALTY HEURISTIC PATHS                            ");
+            Console.WriteLine("==================================================================================");
+            for (int i = 0; i < penaltyPaths.Count; i++)
+            {
+                var pathRes = penaltyPaths[i];
+                double overlap = i == 0 ? 0.0 : AlternativeRouteSolver.CalculatePathOverlap(penaltyPaths[0].Path, pathRes.Path);
+                Console.WriteLine($"[Option {i + 1}] {pathRes.AlgorithmName}");
+                Console.WriteLine($"  * Travel Time : {pathRes.TotalTravelTimeMinutes:F2} minutes");
+                Console.WriteLine($"  * Overlap w/ Primary : {overlap:F1}%");
+                Console.WriteLine($"  * Path        : {PathFormatter.Format(pathRes.Path)}");
+                Console.WriteLine();
+            }
+
+            Console.WriteLine("==================================================================================");
+            Console.WriteLine("                         YEN'S EXACT SHORT SHORT PATHS                            ");
+            Console.WriteLine("==================================================================================");
+            for (int i = 0; i < yenPaths.Count; i++)
+            {
+                var pathRes = yenPaths[i];
+                double overlap = i == 0 ? 0.0 : AlternativeRouteSolver.CalculatePathOverlap(yenPaths[0].Path, pathRes.Path);
+                Console.WriteLine($"[Option {i + 1}] {pathRes.AlgorithmName}");
+                Console.WriteLine($"  * Travel Time : {pathRes.TotalTravelTimeMinutes:F2} minutes");
+                Console.WriteLine($"  * Overlap w/ Primary : {overlap:F1}%");
+                Console.WriteLine($"  * Path        : {PathFormatter.Format(pathRes.Path)}");
+                Console.WriteLine();
+            }
+            Console.WriteLine("==================================================================================");
+        }
+
+        private static void RunEmergencyLaneScenario()
+        {
+            Console.WriteLine("\n--- Emergency Priority Lane Scenario ---");
+            int V = 500;
+            int E = 2500;
+            int seed = 42;
+            int source = 0;
+            int target = V - 1;
+
+            Console.WriteLine($"Generating Graph (GridCity, V = {V}, E = {E}, Seed = {seed})...");
+            var graph = CityGraphGenerator.Generate(V, E, seed, GraphFamily.GridCity);
+
+            // Apply traffic & assign some emergency priority lanes (done during generation but let's highlight)
+            int laneCount = 0;
+            foreach (var edge in graph.AllEdges)
+            {
+                if (edge.HasEmergencyLane) laneCount++;
+            }
+            Console.WriteLine($"Priority Lanes Present in Graph: {laneCount} edges ({(double)laneCount / graph.AllEdges.Count * 100.0:F1}%)");
+
+            var dijkstra = new DijkstraSolver();
+
+            // 1. Normal Routing
+            var normalResult = dijkstra.Solve(graph, source, target, false);
+
+            // 2. Emergency Mode Routing
+            var emergencyResult = dijkstra.Solve(graph, source, target, true);
+
+            double timeSaved = normalResult.TotalTravelTimeMinutes - emergencyResult.TotalTravelTimeMinutes;
+            double percentSaved = (timeSaved / normalResult.TotalTravelTimeMinutes) * 100.0;
+
+            Console.WriteLine("\n==================================================");
+            Console.WriteLine("         EMERGENCY PRIORITY LANE COMPARISON       ");
+            Console.WriteLine("==================================================");
+            Console.WriteLine($"Normal Travel Time : {normalResult.TotalTravelTimeMinutes:F2} minutes");
+            Console.WriteLine($"Normal Path        : {PathFormatter.Format(normalResult.Path)}");
+            Console.WriteLine("--------------------------------------------------");
+            Console.WriteLine($"Emergency Lane Time: {emergencyResult.TotalTravelTimeMinutes:F2} minutes");
+            Console.WriteLine($"Emergency Path     : {PathFormatter.Format(emergencyResult.Path)}");
+            Console.WriteLine("--------------------------------------------------");
+            Console.WriteLine($"Total Travel Time Saved : {timeSaved:F2} minutes");
+            Console.WriteLine($"Percentage Reduction   : {percentSaved:F1}%");
+            Console.WriteLine($"Did Path Change?       : {!ComparePaths(normalResult.Path, emergencyResult.Path)}");
+            Console.WriteLine("==================================================");
+        }
+
+        private static void RunRobustRouteScenario()
+        {
+            Console.WriteLine("\n--- Robust Risk-Aware Route Scenario ---");
+            int V = 500;
+            int E = 2500;
+            int seed = 42;
+            int source = 0;
+            int target = V - 1;
+
+            Console.WriteLine($"Generating Graph (GridCity, V = {V}, E = {E}, Seed = {seed})...");
+            var graph = CityGraphGenerator.Generate(V, E, seed, GraphFamily.GridCity);
+
+            var dijkstra = new DijkstraSolver();
+            var robust = new RobustRouteSolver();
+
+            // 1. Fastest Route (Standard Dijkstra)
+            var fastestResult = dijkstra.Solve(graph, source, target);
+
+            // 2. Robust Route (Dijkstra minimizing TravelTime + lambda * Risk, lambda = 10)
+            double lambda = 10.0;
+            var robustResult = robust.Solve(graph, source, target, false, lambda);
+
+            // Calculate risks along fastest path
+            double fastestRisk = 0;
+            for (int i = 0; i < fastestResult.Path.Count - 1; i++)
+            {
+                int u = fastestResult.Path[i];
+                int v = fastestResult.Path[i + 1];
+                foreach (var edge in graph.GetNeighbors(u))
+                {
+                    if (edge.To == v)
+                    {
+                        fastestRisk += edge.ClosureRisk + edge.TrafficRisk;
+                        break;
+                    }
+                }
+            }
+
+            // Calculate risks along robust path
+            double robustRisk = 0;
+            for (int i = 0; i < robustResult.Path.Count - 1; i++)
+            {
+                int u = robustResult.Path[i];
+                int v = robustResult.Path[i + 1];
+                foreach (var edge in graph.GetNeighbors(u))
+                {
+                    if (edge.To == v)
+                    {
+                        robustRisk += edge.ClosureRisk + edge.TrafficRisk;
+                        break;
+                    }
+                }
+            }
+
+            double riskDiff = fastestRisk - robustRisk;
+            double riskReductionPercent = fastestRisk > 0 ? (riskDiff / fastestRisk) * 100.0 : 0;
+            double timeDiff = robustResult.TotalTravelTimeMinutes - fastestResult.TotalTravelTimeMinutes;
+
+            Console.WriteLine("\n==================================================");
+            Console.WriteLine("          FASTEST ROUTE VS ROBUST ROUTE           ");
+            Console.WriteLine("==================================================");
+            Console.WriteLine($"Fastest Route Travel Time : {fastestResult.TotalTravelTimeMinutes:F2} min");
+            Console.WriteLine($"Fastest Route Risk Score  : {fastestRisk:F4}");
+            Console.WriteLine($"Fastest Route Path        : {PathFormatter.Format(fastestResult.Path)}");
+            Console.WriteLine("--------------------------------------------------");
+            Console.WriteLine($"Robust Route Travel Time  : {robustResult.TotalTravelTimeMinutes:F2} min");
+            Console.WriteLine($"Robust Route Risk Score   : {robustRisk:F4}");
+            Console.WriteLine($"Robust Route Path         : {PathFormatter.Format(robustResult.Path)}");
+            Console.WriteLine("--------------------------------------------------");
+            Console.WriteLine($"Additional Travel Time   : {timeDiff:F2} min");
+            Console.WriteLine($"Risk Score Reduced By     : {riskDiff:F4} ({riskReductionPercent:F1}% safety increase)");
+            Console.WriteLine($"Did Path Change?          : {!ComparePaths(fastestResult.Path, robustResult.Path)}");
+            Console.WriteLine("==================================================");
+        }
+
+        private static void ExportDemoGraphToDot()
+        {
+            Console.WriteLine("\n--- Exporting Graph to DOT Format ---");
+            int V = 12;
+            int E = 35;
+            int seed = 42;
+            int source = 0;
+            int target = V - 1;
+
+            var graph = CityGraphGenerator.Generate(V, E, seed, GraphFamily.RandomSparse);
+            var astar = new AStarSolver();
+            var result = astar.Solve(graph, source, target, 100.0);
+
+            string outputDir = Path.Combine(Directory.GetCurrentDirectory(), "docs");
+            string outputPath = Path.Combine(outputDir, "graph_demo.dot");
+
+            try
+            {
+                GraphVizExporter.ExportToDot(graph, result.Path, outputPath);
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine($"GraphViz DOT file successfully generated: {outputPath}");
+                Console.ResetColor();
+                Console.WriteLine("\nHow to view this graph:");
+                Console.WriteLine("1. Copy-paste the content of docs/graph_demo.dot to an online viewer like https://dreampuf.github.io/GraphvizOnline/");
+                Console.WriteLine("2. Or install Graphviz local compiler and run the command:");
+                Console.WriteLine("   dot -Tpng docs/graph_demo.dot -o docs/graph_demo.png");
+            }
+            catch (Exception ex)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"Export failed: {ex.Message}");
+                Console.ResetColor();
+            }
+        }
+
+        private static void RunScenarioComparisonMatrix()
+        {
+            Console.WriteLine("\n--- Scenario Comparison Matrix ---");
+            string outputDirectory = Path.Combine(Directory.GetCurrentDirectory(), "bench");
+            string outputPath = Path.Combine(outputDirectory, "scenario_results.csv");
+
+            try
+            {
+                BenchmarkRunner.RunScenarioMatrix(outputPath);
+            }
+            catch (Exception ex)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"Matrix execution failed: {ex.Message}");
+                Console.ResetColor();
+            }
         }
 
         private static int ReadIntInput(string prompt, int min, int max)

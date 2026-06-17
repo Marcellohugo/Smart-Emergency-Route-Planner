@@ -6,12 +6,13 @@ using SmartEmergencyRoutePlanner.DataStructures;
 
 namespace SmartEmergencyRoutePlanner.Algorithms
 {
-    public class DijkstraSolver
+    public class RobustRouteSolver
     {
         /// <summary>
-        /// Solves the shortest path problem using Dijkstra's algorithm.
+        /// Solves the shortest path problem under risk constraints, minimizing
+        /// TotalTravelTime + lambda * (ClosureRisk + TrafficRisk).
         /// </summary>
-        public PathResult Solve(Graph graph, int source, int target, bool emergencyMode = false, Dictionary<(int, int), double>? edgePenalties = null)
+        public PathResult Solve(Graph graph, int source, int target, bool emergencyMode = false, double lambda = 10.0)
         {
             var stopwatch = Stopwatch.StartNew();
 
@@ -64,13 +65,9 @@ namespace SmartEmergencyRoutePlanner.Algorithms
                     int v = edge.To;
                     if (visited[v]) continue;
 
-                    double weight = edge.GetWeight(emergencyMode);
-                    if (edgePenalties != null && edgePenalties.TryGetValue((edge.From, edge.To), out double penalty))
-                    {
-                        weight *= penalty;
-                    }
-
-                    double newDist = dist[u] + weight;
+                    // Robust weight: TravelTime + lambda * (ClosureRisk + TrafficRisk)
+                    double robustWeight = edge.GetWeight(emergencyMode, true, lambda);
+                    double newDist = dist[u] + robustWeight;
                     if (newDist < dist[v])
                     {
                         dist[v] = newDist;
@@ -86,14 +83,14 @@ namespace SmartEmergencyRoutePlanner.Algorithms
 
             var result = new PathResult
             {
-                AlgorithmName = "Dijkstra",
+                AlgorithmName = "Robust Route Solver",
                 IsReachable = isReachable,
                 RuntimeTicks = stopwatch.ElapsedTicks,
                 RuntimeMilliseconds = stopwatch.Elapsed.TotalMilliseconds,
                 ExpandedNodes = expandedNodes,
                 RelaxationCount = relaxationCount,
                 HasNegativeCycle = false,
-                Notes = isReachable ? "Optimal path found." : "Target unreachable."
+                Notes = string.Empty
             };
 
             if (isReachable)
@@ -108,8 +105,9 @@ namespace SmartEmergencyRoutePlanner.Algorithms
                 path.Reverse();
                 result.Path = path;
 
-                // Re-calculate the actual unpenalized travel time along the path
+                // Calculate the actual unpenalized travel time and total risk along the path
                 double totalTime = 0;
+                double totalRisk = 0;
                 for (int i = 0; i < path.Count - 1; i++)
                 {
                     int uFrom = path[i];
@@ -119,11 +117,13 @@ namespace SmartEmergencyRoutePlanner.Algorithms
                         if (edge.To == uTo)
                         {
                             totalTime += edge.GetWeight(emergencyMode);
+                            totalRisk += edge.ClosureRisk + edge.TrafficRisk;
                             break;
                         }
                     }
                 }
                 result.TotalTravelTimeMinutes = totalTime;
+                result.Notes = $"Total Path Risk Score: {totalRisk:F4} (Travel Time: {totalTime:F2} min)";
             }
             else
             {

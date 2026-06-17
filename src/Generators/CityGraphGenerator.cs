@@ -10,11 +10,6 @@ namespace SmartEmergencyRoutePlanner.Generators
         /// <summary>
         /// Generates a synthetic city road graph network belonging to a specific graph family.
         /// </summary>
-        /// <param name="vertexCount">Number of vertices.</param>
-        /// <param name="edgeCount">Target number of directed edges.</param>
-        /// <param name="seed">Random seed for reproducibility.</param>
-        /// <param name="family">The structural graph family (RandomSparse, RandomMedium, GridCity).</param>
-        /// <returns>A connected Graph instance.</returns>
         public static Graph Generate(int vertexCount, int edgeCount, int seed, GraphFamily family)
         {
             if (vertexCount < 2)
@@ -28,7 +23,6 @@ namespace SmartEmergencyRoutePlanner.Generators
             // 1. Generate Vertex Coordinates based on Family
             if (family == GraphFamily.GridCity)
             {
-                // Arrange vertices in a rectangular grid
                 int rows = (int)Math.Sqrt(vertexCount);
                 if (rows < 2) rows = 2;
                 int cols = (int)Math.Ceiling((double)vertexCount / rows);
@@ -38,11 +32,9 @@ namespace SmartEmergencyRoutePlanner.Generators
                     int r = i / cols;
                     int c = i % cols;
 
-                    // Base grid spacing
                     double baseX = cols > 1 ? c * (100.0 / (cols - 1)) : 50.0;
                     double baseY = rows > 1 ? r * (100.0 / (rows - 1)) : 50.0;
 
-                    // Add small organic Jitter (15% of cell dimensions)
                     double jitterRangeX = cols > 1 ? (100.0 / (cols - 1)) * 0.15 : 0.0;
                     double jitterRangeY = rows > 1 ? (100.0 / (rows - 1)) * 0.15 : 0.0;
 
@@ -61,7 +53,6 @@ namespace SmartEmergencyRoutePlanner.Generators
             }
             else
             {
-                // Random positioning
                 for (int i = 0; i < vertexCount; i++)
                 {
                     double x = random.NextDouble() * 100.0;
@@ -76,16 +67,24 @@ namespace SmartEmergencyRoutePlanner.Generators
             var existingEdges = new HashSet<(int, int)>();
             long currentEdgeCount = 0;
 
-            // 2. Build Backbone path: 0 -> 1 -> ... -> V-1
-            // This guarantees connectivity regardless of grid structure
+            // Helper to populate advanced edge properties
+            void PopulateAdvancedProperties(Edge edge)
+            {
+                edge.HasEmergencyLane = random.NextDouble() < 0.25; // 25% chance of priority lane
+                edge.ClosureRisk = random.NextDouble() * 0.1;       // Closure risk: [0.0, 0.1]
+                edge.TrafficRisk = random.NextDouble() * 0.3;       // Traffic risk: [0.0, 0.3]
+            }
+
+            // 2. Build Backbone path
             for (int i = 0; i < vertexCount - 1; i++)
             {
                 int from = i;
                 int to = i + 1;
                 double distance = Geometry.CalculateEuclideanDistance(graph.GetVertex(from), graph.GetVertex(to));
-                double speed = 20.0 + (random.NextDouble() * 80.0); // 20 to 100 km/h
+                double speed = 20.0 + (random.NextDouble() * 80.0);
 
-                graph.AddEdge(from, to, distance, speed);
+                var edge = graph.AddEdge(from, to, distance, speed);
+                PopulateAdvancedProperties(edge);
                 existingEdges.Add((from, to));
                 currentEdgeCount++;
             }
@@ -107,7 +106,6 @@ namespace SmartEmergencyRoutePlanner.Generators
                     int r = i / cols;
                     int c = i % cols;
 
-                    // Neighbors: Right, Down, Left, Up
                     int[] neighbors = {
                         c + 1 < cols && i + 1 < vertexCount ? i + 1 : -1,
                         r + 1 < rows && i + cols < vertexCount ? i + cols : -1,
@@ -122,21 +120,21 @@ namespace SmartEmergencyRoutePlanner.Generators
                             if (currentEdgeCount >= targetEdges) break;
                             double distance = Geometry.CalculateEuclideanDistance(graph.GetVertex(i), graph.GetVertex(nb));
                             double speed = 20.0 + (random.NextDouble() * 80.0);
-                            graph.AddEdge(i, nb, distance, speed);
+                            var edge = graph.AddEdge(i, nb, distance, speed);
+                            PopulateAdvancedProperties(edge);
                             existingEdges.Add((i, nb));
                             currentEdgeCount++;
                         }
                     }
                 }
 
-                // Add diagonal links to mimic diagonal avenues
+                // Add diagonal links
                 for (int i = 0; i < vertexCount; i++)
                 {
                     if (currentEdgeCount >= targetEdges) break;
                     int r = i / cols;
                     int c = i % cols;
 
-                    // Diagonals: Down-Right, Down-Left, Up-Right, Up-Left
                     int[] diagonals = {
                         r + 1 < rows && c + 1 < cols && i + cols + 1 < vertexCount ? i + cols + 1 : -1,
                         r + 1 < rows && c - 1 >= 0 && i + cols - 1 < vertexCount ? i + cols - 1 : -1,
@@ -151,7 +149,8 @@ namespace SmartEmergencyRoutePlanner.Generators
                             if (currentEdgeCount >= targetEdges) break;
                             double distance = Geometry.CalculateEuclideanDistance(graph.GetVertex(i), graph.GetVertex(dg));
                             double speed = 20.0 + (random.NextDouble() * 80.0);
-                            graph.AddEdge(i, dg, distance, speed);
+                            var edge = graph.AddEdge(i, dg, distance, speed);
+                            PopulateAdvancedProperties(edge);
                             existingEdges.Add((i, dg));
                             currentEdgeCount++;
                         }
@@ -159,7 +158,7 @@ namespace SmartEmergencyRoutePlanner.Generators
                 }
             }
 
-            // 4. Fill in remaining edges randomly until target density is hit
+            // 4. Fill in remaining edges randomly
             while (currentEdgeCount < targetEdges)
             {
                 int from = random.Next(vertexCount);
@@ -173,7 +172,8 @@ namespace SmartEmergencyRoutePlanner.Generators
                 double distance = Geometry.CalculateEuclideanDistance(graph.GetVertex(from), graph.GetVertex(to));
                 double speed = 20.0 + (random.NextDouble() * 80.0);
 
-                graph.AddEdge(from, to, distance, speed);
+                var edge = graph.AddEdge(from, to, distance, speed);
+                PopulateAdvancedProperties(edge);
                 existingEdges.Add((from, to));
                 currentEdgeCount++;
             }
@@ -181,7 +181,6 @@ namespace SmartEmergencyRoutePlanner.Generators
             return graph;
         }
 
-        // Backwards compatibility overload
         public static Graph Generate(int vertexCount, int edgeCount, int seed)
         {
             return Generate(vertexCount, edgeCount, seed, GraphFamily.RandomSparse);

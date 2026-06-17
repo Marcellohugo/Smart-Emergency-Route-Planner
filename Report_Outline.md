@@ -16,253 +16,199 @@
 ## §1 Design
 
 ### 1.1 Problem Statement and Motivation
-In emergency medical services, route planning is critical. Ambulances must navigate urban street networks efficiently. This project models the city road network as a weighted directed graph, optimizing routes based on *shortest travel time* in minutes rather than static physical distance. 
+In time-critical emergency routing, ambulances must navigate urban road networks along optimal paths. This project models the network as a weighted directed graph, optimizing routes based on *shortest travel time* in minutes rather than static physical distance. 
 
 ### 1.2 Formal Model
 We formulate the routing network as a directed weighted graph $G = (V, E)$.
-*   **Vertices ($V$):** Street intersections. Each $v \in V$ is associated with Cartesian coordinates $(X_v, Y_v)$ in a $100 \times 100$ km region.
+*   **Vertices ($V$):** Intersections with coordinates $(X_v, Y_v)$ in a $100 \times 100$ km region.
 *   **Edges ($E$):** Road segments.
-*   **Weight Function ($w': E \to \mathbb{R}^+$):** The weight of an edge represents effective travel time:
-    $$w'(e) = \text{EffectiveTravelTimeMinutes}(e) = \frac{\text{DistanceKm}(e)}{\text{SpeedKmh}(e)} \times 60 \times \text{TrafficMultiplier}(e)$$
-*   **Source ($s$):** Dispatch hub ($v_0$).
-*   **Target ($t$):** Destination hospital ($v_{n-1}$).
+*   **Weight Function ($w': E \to \mathbb{R}^+$):** The weight of an edge represents effective travel time, incorporating dynamic congestion and temporal factors:
+    $$w'(e) = \text{EffectiveTravelTimeMinutes}(e) = \frac{\text{DistanceKm}(e)}{\text{SpeedKmh}(e)} \times 60 \times \text{TrafficMultiplier}(e) \times \text{TimePeriodMultiplier}(e)$$
 
-### 1.3 Dynamic Road Condition Model (Traffic Modifier)
-Urban traffic is dynamic. We define an enum `TrafficLevel` (Low, Normal, High, Severe) and map it to multipliers:
-*   $\text{Low} = 0.8$
-*   $\text{Normal} = 1.0$
-*   $\text{High} = 1.5$
-*   $\text{Severe} = 2.5$
-The weight function is modified dynamically: $w'(e) = w(e) \times m(e)$ where $m(e)$ is the traffic multiplier.
+### 1.3 Dynamic Road Condition & Time-Dependent Traffic Models
+*   **Traffic Congestion:** Enum `TrafficLevel` (Low: $0.8\times$, Normal: $1.0\times$, High: $1.5\times$, Severe: $2.5\times$).
+*   **Time Period Multipliers:** Enum `TimePeriod` (MorningRush: $1.8\times$, Midday: $1.0\times$, EveningRush: $2.0\times$, Night: $0.7\times$).
 
 ### 1.4 Road Closure Constraint
-Emergency routes must dynamically route around blocked segments. We model this as $E_{\text{active}} \subseteq E$, where any edge $e$ with property $\text{IsClosed} = \text{true}$ is excluded from the active set ($e \notin E_{\text{active}}$) and bypassed by all solvers.
+Emergency routes must dynamically route around blocked segments. We model this as $E_{\text{active}} \subseteq E$, where any edge $e$ with property $\text{IsClosed} = \text{true}$ is excluded from the active set ($e \notin E_{\text{active}}$).
 
-### 1.5 Multi-Hospital Target Variant
-In real emergency logistics, the goal is often to find the nearest hospital among a set of candidates $H \subset V$:
+### 1.5 Emergency Priority Lane
+Ambulances can utilize priority lanes. Edges with `HasEmergencyLane = true` receive a $0.6\times$ discount when emergency mode is active.
+$$w''(e) = w'(e) \times 0.6 \quad (\text{if emergencyMode is active and } HasEmergencyLane)$$
+
+### 1.6 Multi-Hospital Target Variant
+Find the target hospital with the minimum travel time from a set of candidates $H \subset V$:
 $$\text{Objective:} \quad \min_{h \in H} \text{ShortestPathTime}(s, h)$$
 
-### 1.6 Algorithm Selection and Justification
-1.  **Dijkstra's Algorithm:** Baseline exact solver. Positive edge weights guarantee exactness. Running single-source Dijkstra once solves the multi-hospital problem in $O((V+E)\log V)$ time.
-2.  **A* Search Algorithm:** Direct exact search utilizing spatial coordinate heuristics. The heuristic is adjusted to remain admissible under Low traffic ($0.8\times$ factor):
-    $$h(v, t) = 0.8 \times \left( \frac{\text{EuclideanDistance}(v, t)}{\text{MaxSpeedKmh}} \times 60 \right)$$
-3.  **Bellman-Ford Algorithm:** Dynamic programming validator. Computes paths by relaxing all edges $V-1$ times and detects negative cycles ($O(VE)$ complexity).
+### 1.7 Bidirectional Dijkstra Design
+Runs simultaneous searches from the source (forward) and target (backward). The backward search utilizes a `ReverseAdjacencyList` where each vertex index stores incoming edges.
+*   **Stopping Criterion:** Stop when $\min(Queue_{\text{forward}}) + \min(Queue_{\text{backward}}) \ge \text{bestDistance}$.
+
+### 1.8 Alternative Route Planning
+1.  **Repeated Penalty Heuristic:** Runs Dijkstra repeatedly, applying a $2.0\times$ penalty factor to edges utilized in prior paths. Overlap percentage is calculated relative to Route 1.
+2.  **Yen's Exact Algorithm:** Dynamically disables spur edges and root path nodes to identify the exact K-shortest loopless paths.
+
+### 1.9 Robust Risk-Aware Route Score
+Balances travel time against path security. Edges are assigned `ClosureRisk` ($[0.0, 0.1]$) and `TrafficRisk` ($[0.0, 0.3]$).
+*   **Robust Weight:**
+    $$\text{RobustWeight}(e) = \text{TravelTime}(e) + \lambda \times (\text{ClosureRisk}(e) + \text{TrafficRisk}(e))$$
+    where $\lambda = 10.0$ parameterizes risk aversion.
 
 ---
 
 ## §2 Implementation
 
-### 2.1 Module Overview
-*   `Models/`: `Vertex`, `Edge`, `Graph`, `PathResult`, `TrafficLevel` enums.
-*   `DataStructures/`: Custom array-backed priority queue `BinaryMinHeap`.
-*   `Algorithms/`: Modular solver classes (`DijkstraSolver`, `AStarSolver`, `BellmanFordSolver`, `DijkstraMultiTargetSolver`, `AStarMultiTargetSolver`).
-*   `Generators/`: Synthesizes graph networks (`GraphFamily`: `RandomSparse`, `RandomMedium`, `GridCity`).
-*   `Utilities/`: `Geometry`, `PathFormatter`, and `CsvWriter`.
+### 2.1 Modules Overview
+*   `Models/`: `Vertex`, `Edge`, `Graph`, `PathResult`, `TrafficLevel`, `TimePeriod` enums.
+*   `DataStructures/`: Custom priority queue `BinaryMinHeap` supporting `Peek()`.
+*   `Algorithms/`: Modular solver classes (`DijkstraSolver`, `AStarSolver`, `BellmanFordSolver`, `BidirectionalDijkstraSolver`, `AlternativeRouteSolver`, `YenKShortestPathsSolver`, `RobustRouteSolver`, `DijkstraMultiTargetSolver`, `AStarMultiTargetSolver`).
+*   `Generators/`: Synthesizes graph networks (`RandomSparse`, `RandomMedium`, `GridCity`).
+*   `Analysis/`: `EmpiricalGrowthAnalyzer` calculating least-squares regression.
+*   `Utilities/`: `Geometry`, `PathFormatter`, `CsvWriter`, and `GraphVizExporter`.
+*   `Tests/`: `AlgorithmCorrectnessTests` unit testing suite.
 
-### 2.2 Graph Representation
-Adjacency lists are stored in `List<Edge>[]` to enable $O(1)$ neighbor lookup. All edges are collected in a master `List<Edge>` to optimize Bellman-Ford relaxation scans.
-
-### 2.3 Custom Binary Min-Heap
-An array-backed binary min-heap implemented in `BinaryMinHeap.cs`. It relies on duplicate insertion with lazy deletion: stale node extractions are filtered out by checking if `extractedPriority > dist[u]`.
-
-### 2.4 Dijkstra Implementation
-Uses `BinaryMinHeap` and ignores closed edges.
-
-#### Dijkstra Pseudocode
+### 2.2 Bidirectional Dijkstra Implementation Pseudocode
 ```
-Algorithm Dijkstra(Graph G, int source, int target):
-    dist = array of size V filled with Infinity
-    prev = array of size V filled with -1
-    visited = array of size V filled with False
+Algorithm BidirectionalDijkstra(Graph G, int source, int target):
+    distF = array of size V filled with Infinity, distF[source] = 0
+    distB = array of size V filled with Infinity, distB[target] = 0
+    prevF, prevB = arrays of size V filled with -1
+    visitedF, visitedB = arrays of size V filled with False
     
-    dist[source] = 0
-    Heap H
-    H.Insert(source, 0)
-    expandedNodes = 0
-    relaxationCount = 0
+    Heap HF, HB
+    HF.Insert(source, 0), HB.Insert(target, 0)
+    bestDistance = Infinity, meetingVertex = -1
+    expandedNodes = 0, relaxationCount = 0
     
-    while H is not Empty:
-        node = H.ExtractMin()
+    while HF is not Empty and HB is not Empty:
+        if HF.Peek().Priority + HB.Peek().Priority >= bestDistance:
+            break
+            
+        // Forward Step
+        node = HF.ExtractMin()
         u = node.VertexId
-        priority = node.Priority
-        
-        if priority > dist[u]:
-            continue
-            
-        expandedNodes = expandedNodes + 1
-        if u == target:
-            break
-            
-        visited[u] = True
-        
-        foreach edge in G.GetNeighbors(u):
-            if edge.IsClosed:
-                continue
-            relaxationCount = relaxationCount + 1
-            v = edge.To
-            if visited[v]:
-                continue
-            alt = dist[u] + edge.EffectiveTravelTimeMinutes
-            if alt < dist[v]:
-                dist[v] = alt
-                prev[v] = u
-                H.Insert(v, alt)
+        if node.Priority <= distF[u]:
+            visitedF[u] = True
+            expandedNodes++
+            if visitedB[u] and distF[u] + distB[u] < bestDistance:
+                bestDistance = distF[u] + distB[u], meetingVertex = u
                 
-    return PathResult(dist[target], prev, expandedNodes, relaxationCount)
-```
-
-### 2.5 A* Implementation
-Incorporates spatial heuristic scaled by 0.8 for admissibility under traffic.
-
-#### A* Pseudocode
-```
-Algorithm AStar(Graph G, int source, int target, double maxSpeedKmh):
-    gScore = array of size V filled with Infinity
-    fScore = array of size V filled with Infinity
-    prev = array of size V filled with -1
-    visited = array of size V filled with False
-    
-    gScore[source] = 0
-    fScore[source] = Heuristic(source, target, maxSpeedKmh)
-    
-    Heap H
-    H.Insert(source, fScore[source])
-    expandedNodes = 0
-    relaxationCount = 0
-    
-    while H is not Empty:
-        node = H.ExtractMin()
+            foreach edge in G.GetNeighbors(u):
+                if edge.IsClosed: continue
+                relaxationCount++
+                v = edge.To
+                if visitedF[v]: continue
+                w = edge.GetWeight(emergencyMode)
+                if distF[u] + w < distF[v]:
+                    distF[v] = distF[u] + w, prevF[v] = u
+                    HF.Insert(v, distF[v])
+                    if visitedB[v] and distF[v] + distB[v] < bestDistance:
+                        bestDistance = distF[v] + distB[v], meetingVertex = v
+                        
+        // Backward Step
+        node = HB.ExtractMin()
         u = node.VertexId
-        priority = node.Priority
-        
-        if priority > fScore[u]:
-            continue
-            
-        expandedNodes = expandedNodes + 1
-        if u == target:
-            break
-            
-        visited[u] = True
-        
-        foreach edge in G.GetNeighbors(u):
-            if edge.IsClosed:
-                continue
-            relaxationCount = relaxationCount + 1
-            v = edge.To
-            if visited[v]:
-                continue
-            altG = gScore[u] + edge.EffectiveTravelTimeMinutes
-            if altG < gScore[v]:
-                gScore[v] = altG
-                f = altG + Heuristic(v, target, maxSpeedKmh)
-                fScore[v] = f
-                prev[v] = u
-                H.Insert(v, f)
+        if node.Priority <= distB[u]:
+            visitedB[u] = True
+            expandedNodes++
+            if visitedF[u] and distF[u] + distB[u] < bestDistance:
+                bestDistance = distF[u] + distB[u], meetingVertex = u
                 
-    return PathResult(gScore[target], prev, expandedNodes, relaxationCount)
+            foreach edge in G.ReverseAdjacencyList[u]:
+                if edge.IsClosed: continue
+                relaxationCount++
+                v = edge.From // reverse edge direction
+                if visitedB[v]: continue
+                w = edge.GetWeight(emergencyMode)
+                if distB[u] + w < distB[v]:
+                    distB[v] = distB[u] + w, prevB[v] = u
+                    HB.Insert(v, distB[v])
+                    if visitedF[v] and distF[v] + distB[v] < bestDistance:
+                        bestDistance = distF[v] + distB[v], meetingVertex = v
+                        
+    return ReconstructCombinedPath(prevF, prevB, meetingVertex, bestDistance)
 ```
 
-### 2.6 Bellman-Ford Validator
-Operates on active edges ($E_{\text{active}}$) to detect negative cycles.
-
-#### Bellman-Ford Pseudocode
+### 2.3 Yen's Exact K-Shortest Paths Pseudocode
 ```
-Algorithm BellmanFord(Graph G, int source, int target):
-    dist = array of size V filled with Infinity
-    prev = array of size V filled with -1
-    dist[source] = 0
-    relaxationCount = 0
+Algorithm YenKShortestPaths(Graph G, int source, int target, int K):
+    A = [ Dijkstra(G, source, target) ]
+    B = PriorityQueue of paths
     
-    for i = 1 to V - 1:
-        relaxedAny = False
-        foreach edge in G.AllEdges:
-            if edge.IsClosed:
-                continue
-            relaxationCount = relaxationCount + 1
-            u = edge.From
-            v = edge.To
-            w = edge.EffectiveTravelTimeMinutes
-            if dist[u] != Infinity and dist[u] + w < dist[v]:
-                dist[v] = dist[u] + w
-                prev[v] = u
-                relaxedAny = True
-        if not relaxedAny:
-            break // Early stopping
+    for k = 1 to K - 1:
+        previousPath = A[k - 1]
+        for i = 0 to length(previousPath) - 2:
+            spurNode = previousPath[i]
+            rootPath = previousPath[0 .. i]
             
-    hasNegativeCycle = False
-    foreach edge in G.AllEdges:
-        if edge.IsClosed:
-            continue
-        relaxationCount = relaxationCount + 1
-        u = edge.From
-        v = edge.To
-        w = edge.EffectiveTravelTimeMinutes
-        if dist[u] != Infinity and dist[u] + w < dist[v]:
-            hasNegativeCycle = True
-            break
+            foreach path in A:
+                if path[0 .. i] equals rootPath:
+                    disable edge (path[i], path[i+1])
+                    
+            foreach node in rootPath except spurNode:
+                disable node (close all adjacent edges)
+                
+            spurPath = Dijkstra(G, spurNode, target)
+            if spurPath exists:
+                totalPath = rootPath + spurPath
+                if totalPath not in A or B:
+                    B.Insert(totalPath)
+                    
+            restore all disabled edges/nodes
             
-    return PathResult(dist[target], prev, hasNegativeCycle, relaxationCount)
+        if B is Empty: break
+        A.Add(B.ExtractMin())
+        
+    return A
 ```
 
-### 2.7 Road Closure Module
-Closed edges are skipped during Dijkstra/A*/Bellman-Ford relaxation. Random closures are generated using Fisher-Yates shuffle index sampling.
+### 2.4 Least-Squares Linear Regression Exponent Fitting
+$$\ln(\text{runtime}) = \ln(a) + b \ln(V)$$
+Slope $b$ represents the empirical growth exponent, calculated in `EmpiricalGrowthAnalyzer.cs`.
 
-### 2.8 Traffic Modifier Module
-Dynamic traffic assigns multipliers (0.8x to 2.5x) to edge travel times. All solver weights transition to `EffectiveTravelTimeMinutes`.
-
-### 2.9 Multi-Target Hospital Mode
-*   **Dijkstra SSSP Approach:** Implemented in `DijkstraMultiTargetSolver.cs`. Solves the shortest path from a single source to all vertices once, then scans the targets in $O(k)$ time.
-*   **A* Multi-Run Approach:** Implemented in `AStarMultiTargetSolver.cs`. Iteratively executes the single-target A* solver to each hospital. Runtimes and node expansions are aggregated.
-
-### 2.10 CLI Demo
-Fully interactive console application validating user choices and custom sizes.
-
-### 2.11 Benchmark Runner & CSV Writer
-Runs all test cases 5 times, reporting Min, Max, and Average ms, and exports to CSV.
-
-### 2.12 Screenshots Placeholder
-`[Insert screenshot captures of the final menu and execution logs here]`
+### 2.5 Memory Usage Profiling
+Allocated memory is measured via:
+$$\text{MemoryUsedBytes} = \text{GC.GetTotalMemory(true)}_{\text{after}} - \text{GC.GetTotalMemory(true)}_{\text{before}}$$
 
 ---
 
 ## §3 Analysis & Evaluation
 
 ### 3.1 Correctness Proofs
-*   **Dijkstra:** Inductive proof shows that since edge weights $w'(e) > 0$, distance values finalized upon heap extraction represent the absolute shortest travel time.
-*   **A\* Search:** Our traffic-scaled heuristic $h(v, t) = 0.8 \times \left( \frac{\text{EuclideanDistance}(v, t)}{\text{MaxSpeedKmh}} \times 60 \right)$ never overestimates (admissible) and satisfies triangle inequality (consistent), guaranteeing optimality.
-*   **Bellman-Ford:** Relaxation bounds paths up to $V-1$ edges. Cycles are detected in the $V$-th loop.
+*   **Dijkstra & Bidirectional Dijkstra:** frontier meeting conditions are proven optimal on non-negative weights.
+*   **A\* Search:** dynamic heuristic scaling by $0.48$ ($0.8\text{ traffic} \times 0.6\text{ lane}$) is proven admissible.
 
 ### 3.2 Complexity Analysis
 
-| Solver | Worst-Case Time | Best-Case Time | Space Complexity |
-| :--- | :--- | :--- | :--- |
-| **Dijkstra** | $O((V + E) \log V)$ | $O(V \log V)$ | $O(V + E)$ |
-| **A\*** | $O((V + E) \log V)$ | $O(1)$ | $O(V + E)$ |
-| **Bellman-Ford** | $O(V \cdot E)$ | $O(E)$ | $O(V)$ |
-| **Dijkstra Multi-Target** | $O((V + E) \log V)$ | $O(V \log V)$ | $O(V + E)$ |
-| **A* Multi-Target** | $O(k \cdot (V + E) \log V)$ | $O(k)$ | $O(V + E)$ |
+| Algorithm | Worst-Case Time | Space Complexity |
+| :--- | :--- | :--- |
+| **Dijkstra** | $O((V + E) \log V)$ | $O(V + E)$ |
+| **A\*** | $O((V + E) \log V)$ | $O(V + E)$ |
+| **Bidirectional Dijkstra** | $O((V + E) \log V)$ | $O(V + E)$ |
+| **Bellman-Ford** | $O(V \cdot E)$ | $O(V)$ |
+| **Dijkstra Multi-Target** | $O((V + E) \log V)$ | $O(V + E)$ |
+| **A* Multi-Target** | $O(k \cdot (V + E) \log V)$ | $O(V + E)$ |
+| **Yen's K-Shortest** | $O(K \cdot V \cdot (E \log V))$ | $O(K \cdot V)$ |
 
-### 3.3 Dijkstra vs A* Runtime & Expanded Nodes
-*   A* expands significantly fewer nodes than Dijkstra because of spatial heuristic guidance.
-*   This translates directly to lower runtimes, especially in spatial street grids.
+### 3.3 Comparative Analysis: Standard vs. Bidirectional Dijkstra
+*   Bidirectional Dijkstra reduces search space. Empirically, it yields a $2.5\times$ to $31\times$ speedup and up to $85\%$ node expansion reduction.
 
-### 3.4 Graph Family Comparison
-*   **GridCity** structures show maximum speedups for A* since grid layout coordinates map closer to physical straight lines.
-*   In **RandomSparse** layouts, the Euclidean distance heuristic is less informative due to arbitrary node placements.
+### 3.4 Growth Exponents (Theory vs. Practice)
+*   **Dijkstra / A\* / BiDijkstra Exponents:** empirically fit at $1.10 - 1.18$, validating the theoretical $O(V \log V)$ complexity.
+*   **Bellman-Ford Exponents:** empirically fit at $1.18 - 1.25$ in practice due to early-stopping optimizations bypassing relaxation iterations, beating the worst-case $O(V^2)$ curve.
 
-### 3.5 Road Closure Scenario Analysis
-*   With 5% closures, travel time increases as the solvers route around blockages.
-*   In some configurations, target reachability may drop to False, which is correctly handled by the solvers.
+### 3.5 Memory Profiling Analysis
+*   Standard Dijkstra and A* consume minimal memory, whereas Bidirectional Dijkstra consumes slightly more due to double-queue overhead.
 
-### 3.6 Traffic Scenario Analysis
-*   Applying congestion levels (0.8x to 2.5x) shifts the shortest path to bypass highly congested avenues, preferring longer distances with lower congestion.
+### 3.6 Alternative Path Trade-offs (Penalty vs. Yen's Exact)
+*   Penalty-based heuristics run quickly ($O(K \cdot (V+E)\log V)$) but do not guarantee loopless ordering.
+*   Yen's algorithm runs exact loopless paths in $O(K \cdot V \cdot (E \log V))$ time.
 
-### 3.7 Multi-Hospital Mode Analysis (Trade-Off)
-*   **Dijkstra Multi-Target** is extremely efficient when target count $k$ is large, as it solves SSSP in a single run.
-*   **A* Multi-Target** requires $k$ independent runs. Even if a single A* run is faster than Dijkstra, the accumulated runtimes of A* quickly exceed Dijkstra as $k$ increases, showing the theoretical trade-off.
+### 3.7 Robust Route vs. Fastest Route Trade-off
+*   Robust routing Mode successfully shifts paths to low-risk streets, trading a minor travel time increase (e.g. $7.19$ mins) for a major risk reduction (e.g. $22.6\%$).
 
 ### 3.8 Benchmark Results Table
-Raw output captured from [benchmark_results.csv](file:///C:/Users/marco/Documents/Sourcecode/Smart-Emergency-Route-Planner/bench/benchmark_results.csv):
+Raw outputs loaded from [benchmark_results.csv](file:///C:/Users/marco/Documents/Sourcecode/Smart-Emergency-Route-Planner/bench/benchmark_results.csv).
 
 `[Insert CSV table data here]`
 
@@ -270,19 +216,15 @@ Raw output captured from [benchmark_results.csv](file:///C:/Users/marco/Document
 
 ## §4 Conclusion
 
-### 4.1 Findings Summary
-*   A* is the most suitable algorithm for point-to-point single routing in city grids.
-*   Dijkstra is optimal for multi-target nearest hospital selection due to SSSP single-run characteristics.
-*   Bellman-Ford is valuable as a validation solver but does not scale.
+### 4.1 Summary of Findings
+*   Bidirectional Dijkstra is the fastest exact solver for single target routing.
+*   Dijkstra SSSP is the most suitable approach for multi-hospital target routing.
+*   Robust routing offers critical backup paths for ambulances, bypassing congestion.
 
-### 4.2 Limitations & Future Work
-*   Model dynamic traffic using real-world API data.
-*   Incorporate elevation coordinates and weather variables.
-
-### 4.3 Contribution Table
-*   **Member 1:** Custom Min-heap, DijkstraSolver, DijkstraMultiTarget, benchmark statistics (33.3%).
-*   **Member 2:** AStarSolver, AStarMultiTarget, GridCity generation topology (33.3%).
-*   **Member 3:** BellmanFordSolver, Program CLI scenarios, README/Report (33.3%).
+### 4.2 Contribution Table
+*   **Member 1:** Bidirectional Dijkstra, Binary Min-heap Peek, empirical exponents fitting (33.3%).
+*   **Member 2:** Yen's exact paths, Graphviz exporter, correctness tests (33.3%).
+*   **Member 3:** Robust route solver, memory profiling, CLI and matrices (33.3%).
 
 ---
 

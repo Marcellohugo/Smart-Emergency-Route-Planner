@@ -48,6 +48,18 @@ namespace SmartEmergencyRoutePlanner.DataStructures
             return min;
         }
 
+        /// <summary>
+        /// Returns the node with the minimum priority without removing it from the heap.
+        /// </summary>
+        public HeapNode Peek()
+        {
+            if (IsEmpty)
+            {
+                throw new InvalidOperationException("Heap is empty.");
+            }
+            return _elements[0];
+        }
+
         private void HeapifyUp(int index)
         {
             while (index > 0)

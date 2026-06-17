@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("SmartEmergencyRoutePlanner")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+72ccbdec1c06705d37926b5f55bfbe86b2514cbe")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+6e26a541969a5eb9e75fbcf32774908dcf6e9042")]
 [assembly: System.Reflection.AssemblyProductAttribute("SmartEmergencyRoutePlanner")]
 [assembly: System.Reflection.AssemblyTitleAttribute("SmartEmergencyRoutePlanner")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

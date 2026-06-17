@@ -12,7 +12,7 @@ namespace SmartEmergencyRoutePlanner.Algorithms
         /// <summary>
         /// Solves the shortest path problem using A* Search algorithm.
         /// </summary>
-        public PathResult Solve(Graph graph, int source, int target, double maxSpeedKmh = 100.0)
+        public PathResult Solve(Graph graph, int source, int target, double maxSpeedKmh = 100.0, bool emergencyMode = false)
         {
             var stopwatch = Stopwatch.StartNew();
 
@@ -31,13 +31,14 @@ namespace SmartEmergencyRoutePlanner.Algorithms
 
             var targetVertex = graph.GetVertex(target);
 
-            // To remain admissible under dynamic traffic where the minimum traffic multiplier is 0.8,
-            // we scale the heuristic by 0.8.
+            // Admissibility adjustment: low traffic (0.8x) and emergency priority lane (0.6x)
+            double heuristicFactor = emergencyMode ? (0.8 * 0.6) : 0.8;
+
             double Heuristic(int u)
             {
                 var uVertex = graph.GetVertex(u);
                 double distKm = Geometry.CalculateEuclideanDistance(uVertex, targetVertex);
-                return (distKm / maxSpeedKmh) * 60.0 * 0.8;
+                return (distKm / maxSpeedKmh) * 60.0 * heuristicFactor;
             }
 
             gScore[source] = 0;
@@ -74,14 +75,14 @@ namespace SmartEmergencyRoutePlanner.Algorithms
 
                 foreach (var edge in graph.GetNeighbors(u))
                 {
-                    // Ignore closed roads
                     if (edge.IsClosed) continue;
 
                     relaxationCount++;
                     int v = edge.To;
                     if (visited[v]) continue;
 
-                    double tentativeG = gScore[u] + edge.EffectiveTravelTimeMinutes;
+                    double weight = edge.GetWeight(emergencyMode);
+                    double tentativeG = gScore[u] + weight;
                     if (tentativeG < gScore[v])
                     {
                         gScore[v] = tentativeG;
