@@ -124,6 +124,10 @@ SmartEmergencyRoutePlanner/
 │   ├── Tests/
 │   │   └── AlgorithmCorrectnessTests.cs # 7-case correctness suite
 │   └── Program.cs                   # Interactive 14-option CLI menu
+├── visualizer/
+│   ├── index.html                   # Visualizer frontend entrypoint (Double-click to open)
+│   ├── style.css                    # Glassmorphic dark mode styling sheet
+│   └── app.js                       # Visualizer logic, generators, and canvas renderer
 ├── bench/
 │   ├── benchmark_results.csv        # Consolidated timing and memory benchmark report
 │   └── scenario_results.csv         # Matrix experiment results
@@ -175,14 +179,33 @@ To render `docs/graph_demo.dot`:
 1.  Run option **`12. Export Demo Graph to DOT`** from the CLI menu.
 2.  Open `docs/graph_demo.dot` and paste its content to an online viewer such as [Graphviz Online](https://dreampuf.github.io/GraphvizOnline/).
 3.  Alternatively, if you have Graphviz installed locally, compile via terminal:
-    ```bash
-    dot -Tpng docs/graph_demo.dot -o docs/graph_demo.png
-    ```
 4.  The output PNG will show highlighted path edges and closed road segments.
 
 ---
 
-## 8. Academic Integrity and Project Team
+## 8. Interactive Web Visualizer
+
+We provide a beautiful, fully client-side **Single-Page Application (SPA) Web Visualizer** to interactively play with the routing algorithms, topologies, road closures, and traffic conditions in real-time.
+
+### Key Visual Features:
+*   **Frontier Expansion Animations:** Visualizes step-by-step visited frontiers and edge relaxation frames for Dijkstra, A*, and Bidirectional Dijkstra.
+*   **Vertex Relocation & Editing:** Drag nodes to modify coordinates dynamically (instantly recalculating Euclidean distances and travel times), double-click to toggle emergency hospital targets, and right-click to redefine start/target nodes.
+*   **Edge Closure Modifiers:** Click any edge line directly to toggle road closure states, forcing the solvers to dynamically route around obstacles.
+*   **Dashboard Analytics:** Features live counters for travel time, nodes expanded, path distance, solver latency, and a comparative performance matrix.
+*   **Bellman-Ford Validator:** Automatically validates query results against a Bellman-Ford reference solver in JavaScript and alerts you in case of heuristic suboptimality or negative weight cycles.
+
+### How to Open:
+No local server, node packages, or installations are required. Simply navigate to the `visualizer` folder and double-click `index.html` to open it in Chrome, Edge, or Firefox.
+
+Alternatively, execute in your shell:
+```powershell
+# Windows PowerShell
+Start-Process visualizer/index.html
+```
+
+---
+
+## 9. Academic Integrity and Project Team
 
 We pledge that the code and documentation in this repository have been written entirely by our team members. No external library code has been integrated into the core pathfinding algorithms.
 

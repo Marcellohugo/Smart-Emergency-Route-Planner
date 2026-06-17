@@ -66,6 +66,8 @@ Balances travel time against path security. Edges are assigned `ClosureRisk` ($[
 *   `Analysis/`: `EmpiricalGrowthAnalyzer` calculating least-squares regression.
 *   `Utilities/`: `Geometry`, `PathFormatter`, `CsvWriter`, and `GraphVizExporter`.
 *   `Tests/`: `AlgorithmCorrectnessTests` unit testing suite.
+*   `Program.cs`: Interactive 14-option CLI menu.
+*   `visualizer/`: Client-side visualizer files (`index.html`, `style.css`, `app.js`).
 
 ### 2.2 Bidirectional Dijkstra Implementation Pseudocode
 ```
@@ -170,6 +172,11 @@ Slope $b$ represents the empirical growth exponent, calculated in `EmpiricalGrow
 Allocated memory is measured via:
 $$\text{MemoryUsedBytes} = \text{GC.GetTotalMemory(true)}_{\text{after}} - \text{GC.GetTotalMemory(true)}_{\text{before}}$$
 
+### 2.6 Interactive Web Visualizer Architecture
+*   **Canvas Rendering Engine:** Custom double-buffering HTML5 Canvas rendering directed edges, anti-parallel edge offset splits, and color-coded traffic level paths.
+*   **Generator Solver yields:** Pathfinding routines written in JavaScript as Generator functions (`function*`). Relaxes a single node/edge per step, enabling smooth visualization frame rendering.
+*   **Interactive Inputs:** Real-time drag handlers updating vertex coordinates, recalculating connected Euclidean edge weights in real-time, double-click toggles for hospital placements, and live slider modulations.
+
 ---
 
 ## §3 Analysis & Evaluation
@@ -207,7 +214,13 @@ $$\text{MemoryUsedBytes} = \text{GC.GetTotalMemory(true)}_{\text{after}} - \text
 ### 3.7 Robust Route vs. Fastest Route Trade-off
 *   Robust routing Mode successfully shifts paths to low-risk streets, trading a minor travel time increase (e.g. $7.19$ mins) for a major risk reduction (e.g. $22.6\%$).
 
-### 3.8 Benchmark Results Table
+### 3.8 Visual Pathfinding and Frontier Behavior Analysis
+*   **Dijkstra Expansion:** concentric circular wave expanding outwards from the source, relaxing nodes in all directions.
+*   **A\* Expansion:** direct, narrow elliptical path directed toward the target, significantly minimizing expanded nodes.
+*   **Bidirectional Dijkstra Expansion:** two meeting fronts expanding concurrently from source and target, colliding near the midpoint, illustrating high performance improvements.
+*   Demonstrates how road closures block edge relaxation, forcing real-time visual detours around disabled segments.
+
+### 3.9 Benchmark Results Table
 Raw outputs loaded from [benchmark_results.csv](file:///C:/Users/marco/Documents/Sourcecode/Smart-Emergency-Route-Planner/bench/benchmark_results.csv).
 
 `[Insert CSV table data here]`
