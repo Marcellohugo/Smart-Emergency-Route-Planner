@@ -129,6 +129,59 @@ namespace SmartEmergencyRoutePlanner.Generators
                 }
             }
 
+            if (family != GraphFamily.GridCity)
+            {
+                // Random sparse graphs must be generated in O(V + E), not by enumerating
+                // every possible pair. This random spanning backbone guarantees weak
+                // connectivity, and bidirectional insertion makes the benchmark routes
+                // reachable for the required E ~= 5V sizes.
+                var backboneEdges = new List<(int u, int v)>(vertexCount - 1);
+                for (int i = 1; i < vertexCount; i++)
+                {
+                    int windowStart = Math.Max(0, i - Math.Max(4, vertexCount / 20));
+                    int parent = random.Next(windowStart, i);
+                    backboneEdges.Add((parent, i));
+                }
+
+                for (int i = backboneEdges.Count - 1; i > 0; i--)
+                {
+                    int j = random.Next(i + 1);
+                    (backboneEdges[i], backboneEdges[j]) = (backboneEdges[j], backboneEdges[i]);
+                }
+
+                foreach (var edge in backboneEdges)
+                {
+                    if (currentEdgeCount >= edgeCount) break;
+                    AddBidirectionalOrSingleEdge(edge.u, edge.v);
+                }
+
+                int attempts = 0;
+                int maxAttempts = Math.Max(edgeCount * 20, vertexCount * 10);
+                while (currentEdgeCount < edgeCount && attempts < maxAttempts)
+                {
+                    attempts++;
+                    int from = random.Next(vertexCount);
+                    int to = random.Next(vertexCount);
+                    if (from == to) continue;
+
+                    AddBidirectionalOrSingleEdge(from, to);
+                }
+
+                if (currentEdgeCount < edgeCount)
+                {
+                    for (int from = 0; from < vertexCount && currentEdgeCount < edgeCount; from++)
+                    {
+                        for (int offset = 1; offset < vertexCount && currentEdgeCount < edgeCount; offset++)
+                        {
+                            int to = (from + offset) % vertexCount;
+                            AddBidirectionalOrSingleEdge(from, to);
+                        }
+                    }
+                }
+
+                return graph;
+            }
+
             // Union-Find and Potential Edges setup
             var uf = new UnionFind(vertexCount);
             var mstUndirectedEdges = new List<(int u, int v)>();

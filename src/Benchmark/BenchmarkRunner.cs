@@ -193,6 +193,10 @@ namespace SmartEmergencyRoutePlanner.Benchmark
                 double distDiff = Math.Abs(resD.TotalTravelTimeMinutes - resA.TotalTravelTimeMinutes);
                 bool sameDist = distDiff < 1e-5;
                 bool biEqualsDijk = Math.Abs(resD.TotalTravelTimeMinutes - resBi.TotalTravelTimeMinutes) < 1e-5;
+                bool bfEqualsDijk = !bfDist.HasValue || Math.Abs(resD.TotalTravelTimeMinutes - bfDist.Value) < 1e-5;
+                string costConsistencyStatus = sameDist && biEqualsDijk && bfEqualsDijk
+                    ? (bfDist.HasValue ? "PASS" : "PASS_BF_SKIPPED_LARGE_V")
+                    : "FAIL";
 
                 double aStarSpeedup = avgAMs > 0 ? avgDMs / avgAMs : 0;
                 double biDijkSpeedup = avgBiMs > 0 ? avgDMs / avgBiMs : 0;
@@ -244,6 +248,8 @@ namespace SmartEmergencyRoutePlanner.Benchmark
                     SameDistance = sameDist,
                     DistanceDifference = distDiff,
                     BiDijkstraEqualsDijkstra = biEqualsDijk,
+                    BellmanFordEqualsDijkstra = bfEqualsDijk,
+                    CostConsistencyStatus = costConsistencyStatus,
                     AStarSpeedup = aStarSpeedup,
                     BiDijkstraSpeedup = biDijkSpeedup,
                     ExpandedNodeReductionPercent = nodeReductionPercent,

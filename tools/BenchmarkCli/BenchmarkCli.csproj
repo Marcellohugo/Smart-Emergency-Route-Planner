@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\..\src\Algorithms\**\*.cs" LinkBase="src\Algorithms" />
+    <Compile Include="..\..\src\Analysis\**\*.cs" LinkBase="src\Analysis" />
+    <Compile Include="..\..\src\Benchmark\**\*.cs" LinkBase="src\Benchmark" />
+    <Compile Include="..\..\src\DataStructures\**\*.cs" LinkBase="src\DataStructures" />
+    <Compile Include="..\..\src\Generators\**\*.cs" LinkBase="src\Generators" />
+    <Compile Include="..\..\src\Graph\**\*.cs" LinkBase="src\Graph" />
+    <Compile Include="..\..\src\Models\**\*.cs" LinkBase="src\Models" />
+    <Compile Include="..\..\src\Utilities\**\*.cs" LinkBase="src\Utilities" />
+  </ItemGroup>
+
+</Project>

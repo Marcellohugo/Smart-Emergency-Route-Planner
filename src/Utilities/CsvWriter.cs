@@ -29,7 +29,7 @@ namespace SmartEmergencyRoutePlanner.Utilities
                                  "DijkstraExpandedNodes,AStarExpandedNodes,BiDijkstraExpandedNodes," +
                                  "DijkstraRelaxations,AStarRelaxations,BiDijkstraRelaxations," +
                                  "DijkstraPathLength,AStarPathLength,BiDijkstraPathLength," +
-                                 "SameDistance,DistanceDifference,BiDijkstraEqualsDijkstra," +
+                                 "SameDistance,DistanceDifference,BiDijkstraEqualsDijkstra,BellmanFordEqualsDijkstra,CostConsistencyStatus," +
                                  "AStarSpeedup,BiDijkstraSpeedup,ExpandedNodeReductionPercent," +
                                  "DijkstraMemoryBytes,AStarMemoryBytes,BiDijkstraMemoryBytes,BellmanFordMemoryBytes");
 
@@ -73,6 +73,8 @@ namespace SmartEmergencyRoutePlanner.Utilities
                                      $"{res.SameDistance.ToString().ToLower()}," +
                                      $"{res.DistanceDifference:F4}," +
                                      $"{res.BiDijkstraEqualsDijkstra.ToString().ToLower()}," +
+                                     $"{res.BellmanFordEqualsDijkstra.ToString().ToLower()}," +
+                                     $"{res.CostConsistencyStatus}," +
                                      $"{res.AStarSpeedup:F4}," +
                                      $"{res.BiDijkstraSpeedup:F4}," +
                                      $"{res.ExpandedNodeReductionPercent:F2}," +

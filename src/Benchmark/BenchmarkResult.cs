@@ -55,6 +55,8 @@ namespace SmartEmergencyRoutePlanner.Benchmark
         public bool SameDistance { get; set; } // Dijkstra equals A*
         public double DistanceDifference { get; set; }
         public bool BiDijkstraEqualsDijkstra { get; set; }
+        public bool BellmanFordEqualsDijkstra { get; set; }
+        public string CostConsistencyStatus { get; set; } = string.Empty;
         public double AStarSpeedup { get; set; }
         public double BiDijkstraSpeedup { get; set; }
         public double ExpandedNodeReductionPercent { get; set; }
