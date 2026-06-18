@@ -1,0 +1,110 @@
+@page "/"
+@namespace SmartEmergencyRoutePlanner
+
+@inject IJSRuntime JSRuntime
+@inject RoutePlannerService RoutePlanner
+
+<div class="app-container">
+    <header class="main-header">
+        <div class="header-logo">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-compass">
+                <circle cx="12" cy="12" r="10" />
+                <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
+            </svg>
+            <div class="header-titles">
+                <h1>Perencana Rute Ambulans Darurat</h1>
+                <p class="subtitle">Sistem Analisis Rute Tercepat Menggunakan Algoritma Dijkstra &amp; A* Search (Web .NET)</p>
+            </div>
+        </div>
+        <div class="header-actions">
+            <div class="status-badge" id="systemStatus">
+                <span class="status-dot"></span>
+                <span>Sistem Aktif (WASM)</span>
+            </div>
+        </div>
+    </header>
+
+    <div class="workspace">
+        <aside class="sidebar-left">
+            <RouteConfigurationPanel @bind-GraphLayout="GraphLayout"
+                                     @bind-NodeCount="NodeCount"
+                                     @bind-EdgeCount="EdgeCount"
+                                     @bind-RandomSeed="RandomSeed"
+                                     @bind-ActiveSolver="ActiveSolver"
+                                     @bind-YenK="YenK"
+                                     @bind-RobustLambda="RobustLambda"
+                                     OnRandomSeedRolled="RollRandomSeed"
+                                     OnGraphGenerated="GenerateNewGraph"
+                                     OnRouteParametersChanged="OnSolverChanged" />
+
+            <TrafficConditionsPanel @bind-EmergencyMode="EmergencyMode"
+                                    @bind-SelectedTrafficLevel="selectedTrafficLevel"
+                                    @bind-TimePeriod="TimePeriod"
+                                    OnEmergencyModeChanged="SolveCurrentRoute"
+                                    OnTrafficConditionsChanged="UpdateTrafficConditions"
+                                    OnTimeFactorChanged="UpdateTimeFactor"
+                                    OnCloseRandomRoads="CloseRandomRoads"
+                                    OnResetRoadClosures="ResetRoadClosures" />
+
+            <RouteMetricsPanel TravelTimeText="@FormatTravelTime()"
+                               DistanceText="@FormatDistance()"
+                               ExpandedText="@FormatExpanded()"
+                               RuntimeText="@FormatRuntime()"
+                               ValidationStatus="@ValidationStatus" />
+        </aside>
+
+        <main class="canvas-panel">
+            <MapCanvasPanel ActiveGraph="@ActiveGraph"
+                            SvgViewBox="@SvgViewBox"
+                            IsPanning="@isPanning"
+                            ActiveDraggedVertexId="@activeDraggedVertexId"
+                            ActiveSolver="@ActiveSolver"
+                            EmergencyMode="@EmergencyMode"
+                            SourceNodeId="@SourceNodeId"
+                            TargetNodeId="@TargetNodeId"
+                            HospitalNodeIds="@HospitalNodeIds"
+                            HoveredVertexId="@hoveredVertexId"
+                            HoveredEdge="@hoveredEdge"
+                            TooltipX="@tooltipX"
+                            TooltipY="@tooltipY"
+                            AlternativePaths="@AlternativePaths"
+                            ComparisonResults="@ComparisonResults"
+                            HospitalDistances="@HospitalDistances"
+                            ActiveTab="@activeTab"
+                            ActiveTabChanged="SetActiveTab"
+                            IsAnimating="@isAnimating"
+                            @bind-AnimationSpeed="AnimationSpeed"
+                            AnimatedVisitedNodes="@animatedVisitedNodes"
+                            AnimatedPathNodes="@animatedPathNodes"
+                            AnimatedPathEdges="@animatedPathEdges"
+                            IsNodeInActivePathEvaluator="IsNodeInActivePath"
+                            IsEdgeInPathEvaluator="IsEdgeInPath"
+                            IsEdgeInAlternativePathEvaluator="IsEdgeInAlternativePath"
+                            IsEdgeAnimatedEvaluator="IsEdgeAnimated"
+                            TranslateTrafficEvaluator="TranslateTraffic"
+                            OnSvgReferenceChanged="SetSvgReference"
+                            OnSvgMouseMove="OnSvgMouseMove"
+                            OnSvgMouseUp="OnSvgMouseUp"
+                            OnSvgMouseDown="OnSvgMouseDown"
+                            OnSvgWheel="OnSvgWheel"
+                            OnNodeMouseDown="OnNodeMouseDown"
+                            OnToggleHospitalStatus="ToggleHospitalStatus"
+                            OnSetTargetNode="SetTargetNode"
+                            OnNodeMouseOver="OnNodeMouseOver"
+                            OnNodeMouseOut="OnNodeMouseOut"
+                            OnToggleEdgeClosure="ToggleEdgeClosure"
+                            OnEdgeMouseOver="OnEdgeMouseOver"
+                            OnEdgeMouseOut="OnEdgeMouseOut"
+                            OnZoomIn="ZoomIn"
+                            OnZoomOut="ZoomOut"
+                            OnResetZoom="ResetZoom"
+                            OnSolveCurrentRoute="SolveCurrentRoute"
+                            OnStartAnimation="StartAnimation"
+                            OnStopAnimation="StopAnimation" />
+
+            <SystemLogPanel Logs="@ConsoleLogs"
+                            OnRunCorrectnessTests="RunCorrectnessTests"
+                            OnClearConsole="ClearConsole" />
+        </main>
+    </div>
+</div>

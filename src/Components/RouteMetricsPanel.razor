@@ -1,0 +1,71 @@
+@namespace SmartEmergencyRoutePlanner.Components
+
+<div class="control-card">
+    <div class="card-header">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-bar-chart-2"><line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" /></svg>
+        <h2>Hasil Perhitungan Rute</h2>
+    </div>
+    <div class="card-body">
+        <div class="metric-grid">
+            <div class="metric-card">
+                <div class="metric-lbl">Waktu Tempuh</div>
+                <div class="metric-val">@TravelTimeText</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-lbl">Jarak Rute</div>
+                <div class="metric-val">@DistanceText</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-lbl">Jalan Diperiksa</div>
+                <div class="metric-val">@ExpandedText</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-lbl">Proses Hitung</div>
+                <div class="metric-val">@RuntimeText</div>
+            </div>
+        </div>
+
+        <div class="validation-status mt-1">
+            @if (ValidationStatus == "valid")
+            {
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="validation-shield valid"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
+                <div class="validation-details">
+                    <div class="validation-title">Rute Akurat (Valid)</div>
+                    <div class="validation-desc">Waktu tempuh optimal diverifikasi silang dengan algoritma Bellman-Ford.</div>
+                </div>
+            }
+            else if (ValidationStatus == "invalid")
+            {
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="validation-shield invalid"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
+                <div class="validation-details">
+                    <div class="validation-title">Rute Tidak Valid</div>
+                    <div class="validation-desc">Terdapat perbedaan hasil atau siklus berat negatif pada graf peta.</div>
+                </div>
+            }
+            else if (ValidationStatus == "negative_cycle")
+            {
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="validation-shield invalid"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>
+                <div class="validation-details">
+                    <div class="validation-title">Siklus Negatif Ditemukan</div>
+                    <div class="validation-desc">Siklus berbobot negatif terdeteksi oleh Bellman-Ford. Rute tidak menentu.</div>
+                </div>
+            }
+            else
+            {
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="validation-shield"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
+                <div class="validation-details">
+                    <div class="validation-title">Belum Divalidasi</div>
+                    <div class="validation-desc">Tunggu perhitungan rute selesai untuk verifikasi akurasi Bellman-Ford.</div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string TravelTimeText { get; set; } = "--";
+    [Parameter] public string DistanceText { get; set; } = "--";
+    [Parameter] public string ExpandedText { get; set; } = "--";
+    [Parameter] public string RuntimeText { get; set; } = "--";
+    [Parameter] public string ValidationStatus { get; set; } = "none";
+}

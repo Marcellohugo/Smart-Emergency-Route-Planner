@@ -27,15 +27,11 @@ namespace SmartEmergencyRoutePlanner.Tests
             Console.WriteLine("==================================================");
             if (allPassed)
             {
-                Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine("        ALL CORRECTNESS TESTS PASSED SUCCESS!     ");
-                Console.ResetColor();
+                WriteColoredLine("        ALL CORRECTNESS TESTS PASSED SUCCESS!     ", ConsoleColor.Green);
             }
             else
             {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine("        SOME CORRECTNESS TESTS FAILED!            ");
-                Console.ResetColor();
+                WriteColoredLine("        SOME CORRECTNESS TESTS FAILED!            ", ConsoleColor.Red);
             }
             Console.WriteLine("==================================================");
 
@@ -179,16 +175,16 @@ namespace SmartEmergencyRoutePlanner.Tests
             // 2 -> 3 has High traffic (1.5). Cost = 1.0 * 1.5 = 1.5
             // 3 -> 4 has normal traffic (1.0). Cost = 2.0
             // Total cost = 2.0 + 4.5 + 1.5 + 2.0 = 10.0 mins
-            
+
             // Route 0 -> 2 -> 3 -> 4:
             // 0 -> 2 has normal traffic (1.0). Cost = 6.0
             // 2 -> 3 has High traffic (1.5). Cost = 1.0 * 1.5 = 1.5
             // 3 -> 4 has normal traffic (1.0). Cost = 2.0
             // Total cost = 6.0 + 1.5 + 2.0 = 9.5 mins
-            
+
             e12.Traffic = TrafficLevel.High;
             e12.TrafficMultiplier = 1.5;
-            
+
             e23.Traffic = TrafficLevel.High;
             e23.TrafficMultiplier = 1.5;
 
@@ -216,7 +212,7 @@ namespace SmartEmergencyRoutePlanner.Tests
             graph.AddEdge(0, 1, 2.0, 60.0);
             graph.AddEdge(1, 2, 3.0, 60.0);
             var eCycle = graph.AddEdge(2, 0, 1.0, 60.0);
-            
+
             // Force negative weight on the cycle edge
             eCycle.TravelTimeMinutes = -10.0;
 
@@ -230,7 +226,7 @@ namespace SmartEmergencyRoutePlanner.Tests
         private static bool TestAStarEqualsDijkstra()
         {
             var graph = CityGraphGenerator.Generate(100, 500, 42, GraphFamily.RandomSparse);
-            
+
             var dijkstra = new DijkstraSolver().Solve(graph, 0, 99);
             var astar = new AStarSolver().Solve(graph, 0, 99, 100.0);
 
@@ -242,10 +238,8 @@ namespace SmartEmergencyRoutePlanner.Tests
         private static void PrintTestResult(string name, bool passed, double expected, double actual)
         {
             string status = passed ? "PASSED" : "FAILED";
-            Console.ForegroundColor = passed ? ConsoleColor.Green : ConsoleColor.Red;
-            Console.Write($"[{status}] ");
-            Console.ResetColor();
-            
+            WriteColored($"[{status}] ", passed ? ConsoleColor.Green : ConsoleColor.Red);
+
             string expectedStr = expected == -1.0 ? "Unreachable" : $"{expected:F4} min";
             string actualStr = actual == -1.0 ? "Unreachable" : $"{actual:F4} min";
 
@@ -256,6 +250,26 @@ namespace SmartEmergencyRoutePlanner.Tests
             }
 
             Console.WriteLine($"{name,-40} | Exp: {expectedStr,-15} | Act: {actualStr}");
+        }
+
+        private static void WriteColoredLine(string message, ConsoleColor color)
+        {
+            WriteColored(message + Environment.NewLine, color);
+        }
+
+        private static void WriteColored(string message, ConsoleColor color)
+        {
+            if (!OperatingSystem.IsBrowser())
+            {
+                Console.ForegroundColor = color;
+            }
+
+            Console.Write(message);
+
+            if (!OperatingSystem.IsBrowser())
+            {
+                Console.ResetColor();
+            }
         }
     }
 }

@@ -10,7 +10,7 @@ namespace SmartEmergencyRoutePlanner.Models
         public List<Edge>[] AdjacencyList { get; private set; }
         public List<Edge>[] ReverseAdjacencyList { get; private set; }
         public List<Edge> AllEdges { get; private set; }
-        
+
         private readonly Dictionary<int, Vertex> _vertexMap;
 
         public Graph(int vertexCount)
@@ -97,7 +97,7 @@ namespace SmartEmergencyRoutePlanner.Models
             ResetClosures();
             var random = new Random(seed);
             int targetClosureCount = (int)(AllEdges.Count * closureRate);
-            
+
             var indices = new List<int>(AllEdges.Count);
             for (int i = 0; i < AllEdges.Count; i++)
             {

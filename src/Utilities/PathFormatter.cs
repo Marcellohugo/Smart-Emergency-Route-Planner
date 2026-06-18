@@ -25,7 +25,7 @@ namespace SmartEmergencyRoutePlanner.Utilities
         {
             var sb = new StringBuilder();
             int edgeCount = result.IsReachable && result.Path.Count > 0 ? result.Path.Count - 1 : 0;
-            
+
             sb.AppendLine($"Algorithm: {result.AlgorithmName}");
             sb.AppendLine($"Source: {source}");
             sb.AppendLine($"Target: {target}");
@@ -35,7 +35,7 @@ namespace SmartEmergencyRoutePlanner.Utilities
             sb.AppendLine($"Relaxation count: {result.RelaxationCount}");
             sb.AppendLine($"Runtime: {result.RuntimeMilliseconds:F2} ms");
             sb.AppendLine($"Path: {Format(result.Path)}");
-            
+
             return sb.ToString();
         }
     }

@@ -44,6 +44,7 @@ namespace SmartEmergencyRoutePlanner.Algorithms
             int meetingVertex = -1;
 
             int expandedNodes = 0;
+            var expandedList = new List<int>();
             long relaxationCount = 0;
 
             while (!heapF.IsEmpty && !heapB.IsEmpty)
@@ -67,6 +68,7 @@ namespace SmartEmergencyRoutePlanner.Algorithms
                     {
                         visitedF[u] = true;
                         expandedNodes++;
+                        expandedList.Add(u);
 
                         if (visitedB[u])
                         {
@@ -117,6 +119,7 @@ namespace SmartEmergencyRoutePlanner.Algorithms
                     {
                         visitedB[u] = true;
                         expandedNodes++;
+                        expandedList.Add(u);
 
                         if (visitedF[u])
                         {
@@ -169,6 +172,7 @@ namespace SmartEmergencyRoutePlanner.Algorithms
                 RuntimeTicks = stopwatch.ElapsedTicks,
                 RuntimeMilliseconds = stopwatch.Elapsed.TotalMilliseconds,
                 ExpandedNodes = expandedNodes,
+                ExpandedNodesList = expandedList,
                 RelaxationCount = relaxationCount,
                 HasNegativeCycle = false,
                 Notes = isReachable ? $"Meeting vertex: {meetingVertex}" : "Target unreachable."

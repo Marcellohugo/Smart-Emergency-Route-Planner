@@ -37,7 +37,7 @@ namespace SmartEmergencyRoutePlanner.Algorithms
                 for (int i = 0; i < previousPath.Count - 1; i++)
                 {
                     int spurNode = previousPath[i];
-                    
+
                     // Root path is the subpath from source to spurNode
                     var rootPath = previousPath.GetRange(0, i + 1);
 

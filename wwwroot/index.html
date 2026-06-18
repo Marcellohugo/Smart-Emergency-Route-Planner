@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Emergency Route Planner - Visualisasi Rute Ambulans</title>
+    <base href="/" />
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Lucide Icons (CDN) untuk tampilan premium -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="style.css?v=2">
+</head>
+
+<body>
+    <div id="app">
+        <!-- Softer loading state -->
+        <div style="display:flex; flex-direction:column; justify-content:center; align-items:center; height:100vh; font-family:'Outfit', sans-serif; background-color:#f8fafc; color:#0f172a;">
+            <div style="font-size:1.8rem; font-weight:800; margin-bottom:8px; letter-spacing:-0.02em;">Perencana Rute Ambulans</div>
+            <div style="font-size:0.85rem; color:#64748b;">Memuat Aplikasi Web .NET...</div>
+        </div>
+    </div>
+
+    <div id="blazor-error-ui">
+        An unhandled error has occurred.
+        <a href="" class="reload">Reload</a>
+        <a class="dismiss">🗙</a>
+    </div>
+
+    <script src="_framework/blazor.webassembly.js"></script>
+    <script>
+        // Helper to trigger lucide icon recreation dynamically
+        window.recreateLucideIcons = () => {
+            if (window.lucide) {
+                window.lucide.createIcons();
+            }
+        };
+        // Helper to convert screen coordinates to SVG coordinates
+        window.getSvgMouseCoords = (svgElement, clientX, clientY) => {
+            if (!svgElement) return { x: 0, y: 0 };
+            const pt = svgElement.createSVGPoint();
+            pt.x = clientX;
+            pt.y = clientY;
+            const cursorPoint = pt.matrixTransform(svgElement.getScreenCTM().inverse());
+            return { x: cursorPoint.x, y: cursorPoint.y };
+        };
+    </script>
+</body>
+
+</html>

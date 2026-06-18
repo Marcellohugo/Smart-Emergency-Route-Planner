@@ -32,7 +32,7 @@ namespace SmartEmergencyRoutePlanner.Utilities
                                  "SameDistance,DistanceDifference,BiDijkstraEqualsDijkstra," +
                                  "AStarSpeedup,BiDijkstraSpeedup,ExpandedNodeReductionPercent," +
                                  "DijkstraMemoryBytes,AStarMemoryBytes,BiDijkstraMemoryBytes,BellmanFordMemoryBytes");
-                
+
                 foreach (var res in results)
                 {
                     string bfAvgMsStr = res.BellmanFordAvgMs.HasValue ? res.BellmanFordAvgMs.Value.ToString("F4") : "N/A";

@@ -1,0 +1,163 @@
+@namespace SmartEmergencyRoutePlanner.Components
+@using SmartEmergencyRoutePlanner.Generators
+
+<div class="control-card">
+    <div class="card-header">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-map"><path d="M14.1 6a2 2 0 0 0-1.6.8L10 10.5 7.5 7.6A2 2 0 0 0 6 7H3v10h3a2 2 0 0 0 1.5-.7L10 12.5l2.5 2.9a2 2 0 0 0 1.5.6h7V6h-6.9z" /></svg>
+        <h2>Peta & Metode Rute</h2>
+    </div>
+    <div class="card-body">
+        <div class="form-group">
+            <label for="graphFamily">Model Layout Peta</label>
+            <select id="graphFamily" value="@GraphLayout" @onchange="SetGraphLayout">
+                <option value="@GraphFamily.GridCity">Kota Grid (Kotak Teratur + Diagonal)</option>
+                <option value="@GraphFamily.RandomSparse">Peta Acak (Jalan Menyebar Bebas)</option>
+            </select>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group half">
+                <label for="nodeCount">Persimpangan (V)</label>
+                <input type="number" id="nodeCount" min="10" max="300" value="@NodeCount" @onchange="SetNodeCount">
+            </div>
+            <div class="form-group half">
+                <label for="edgeCount">Ruas Jalan (E)</label>
+                <input type="number" id="edgeCount" min="15" max="800" value="@EdgeCount" @onchange="SetEdgeCount">
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group half">
+                <label for="randomSeed">Kode Peta (Seed)</label>
+                <div class="seed-input-container">
+                    <input type="number" id="randomSeed" min="1" max="999999" value="@RandomSeed" @onchange="SetRandomSeed">
+                    <button class="icon-button" title="Acak Baru" @onclick="OnRandomSeedRolled">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-shuffle"><polyline points="16 3 21 3 21 8" /><line x1="4" y1="20" x2="21" y2="3" /><polyline points="21 16 21 21 16 21" /><line x1="15" y1="15" x2="21" y2="21" /><line x1="4" y1="4" x2="9" y2="9" /></svg>
+                    </button>
+                </div>
+            </div>
+            <div class="form-group half">
+                <label>&nbsp;</label>
+                <button class="secondary-button btn-full" style="height: 32px; padding: 0;" @onclick="OnGraphGenerated">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-refresh-cw"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" /><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" /><path d="M16 16h5v5" /></svg> Buat Peta
+                </button>
+            </div>
+        </div>
+
+        <div class="form-group border-top-divider">
+            <label for="algorithmSelect">Metode / Algoritma Rute</label>
+            <select id="algorithmSelect" value="@ActiveSolver" @onchange="SetActiveSolver">
+                <option value="Dijkstra">Rute Tercepat Standar (Dijkstra)</option>
+                <option value="AStar">Rute Tercepat Pintar (A* Search)</option>
+                <option value="BidirectionalDijkstra">Pencarian Dua Arah (Bidirectional)</option>
+                <option value="Robust">Rute Paling Aman (Hindari Jalan Rusak)</option>
+                <option value="Alternative">Rute Cadangan Terpisah (Penalti)</option>
+                <option value="Yen">Kumpulan Rute Alternatif Terbaik (Yen's)</option>
+                <option value="MultiHospital">Menuju Rumah Sakit Terdekat</option>
+            </select>
+        </div>
+
+        @if (ActiveSolver == "Yen" || ActiveSolver == "Alternative")
+        {
+            <div class="solver-param-box">
+                <div class="form-group">
+                    <label for="yenK">Jumlah Jalur Rute (K)</label>
+                    <div class="slider-val-container">
+                        <input type="range" id="yenK" min="2" max="6" value="@YenK" @onchange="SetYenK">
+                        <span>@YenK</span>
+                    </div>
+                </div>
+            </div>
+        }
+
+        @if (ActiveSolver == "Robust")
+        {
+            <div class="solver-param-box">
+                <div class="form-group">
+                    <label for="lambdaWeight">Faktor Keamanan (λ)</label>
+                    <div class="slider-val-container">
+                        <input type="range" id="lambdaWeight" min="0" max="50" step="1" value="@RobustLambda" @onchange="SetRobustLambda">
+                        <span>@RobustLambda</span>
+                    </div>
+                    <span class="param-help">Semakin tinggi nilai, rute akan semakin menghindari jalan macet &amp; rawan tutup.</span>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public GraphFamily GraphLayout { get; set; }
+    [Parameter] public EventCallback<GraphFamily> GraphLayoutChanged { get; set; }
+    [Parameter] public int NodeCount { get; set; }
+    [Parameter] public EventCallback<int> NodeCountChanged { get; set; }
+    [Parameter] public int EdgeCount { get; set; }
+    [Parameter] public EventCallback<int> EdgeCountChanged { get; set; }
+    [Parameter] public int RandomSeed { get; set; }
+    [Parameter] public EventCallback<int> RandomSeedChanged { get; set; }
+    [Parameter] public string ActiveSolver { get; set; } = "Dijkstra";
+    [Parameter] public EventCallback<string> ActiveSolverChanged { get; set; }
+    [Parameter] public int YenK { get; set; }
+    [Parameter] public EventCallback<int> YenKChanged { get; set; }
+    [Parameter] public double RobustLambda { get; set; }
+    [Parameter] public EventCallback<double> RobustLambdaChanged { get; set; }
+    [Parameter] public EventCallback OnRandomSeedRolled { get; set; }
+    [Parameter] public EventCallback OnGraphGenerated { get; set; }
+    [Parameter] public EventCallback OnRouteParametersChanged { get; set; }
+
+    private async Task SetGraphLayout(ChangeEventArgs e)
+    {
+        if (Enum.TryParse<GraphFamily>(e.Value?.ToString(), out var value))
+        {
+            await GraphLayoutChanged.InvokeAsync(value);
+        }
+    }
+
+    private async Task SetNodeCount(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int value))
+        {
+            await NodeCountChanged.InvokeAsync(value);
+        }
+    }
+
+    private async Task SetEdgeCount(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int value))
+        {
+            await EdgeCountChanged.InvokeAsync(value);
+        }
+    }
+
+    private async Task SetRandomSeed(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int value))
+        {
+            await RandomSeedChanged.InvokeAsync(value);
+        }
+    }
+
+    private async Task SetActiveSolver(ChangeEventArgs e)
+    {
+        await ActiveSolverChanged.InvokeAsync(e.Value?.ToString() ?? "Dijkstra");
+        await OnRouteParametersChanged.InvokeAsync();
+    }
+
+    private async Task SetYenK(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int value))
+        {
+            await YenKChanged.InvokeAsync(value);
+            await OnRouteParametersChanged.InvokeAsync();
+        }
+    }
+
+    private async Task SetRobustLambda(ChangeEventArgs e)
+    {
+        if (double.TryParse(e.Value?.ToString(), out double value))
+        {
+            await RobustLambdaChanged.InvokeAsync(value);
+            await OnRouteParametersChanged.InvokeAsync();
+        }
+    }
+}

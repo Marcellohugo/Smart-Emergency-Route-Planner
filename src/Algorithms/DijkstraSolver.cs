@@ -31,6 +31,7 @@ namespace SmartEmergencyRoutePlanner.Algorithms
             heap.Insert(source, 0);
 
             int expandedNodes = 0;
+            var expandedList = new List<int>();
             long relaxationCount = 0;
             bool reached = false;
 
@@ -47,6 +48,7 @@ namespace SmartEmergencyRoutePlanner.Algorithms
                 }
 
                 expandedNodes++;
+                expandedList.Add(u);
 
                 if (u == target)
                 {
@@ -91,6 +93,7 @@ namespace SmartEmergencyRoutePlanner.Algorithms
                 RuntimeTicks = stopwatch.ElapsedTicks,
                 RuntimeMilliseconds = stopwatch.Elapsed.TotalMilliseconds,
                 ExpandedNodes = expandedNodes,
+                ExpandedNodesList = expandedList,
                 RelaxationCount = relaxationCount,
                 HasNegativeCycle = false,
                 Notes = isReachable ? "Optimal path found." : "Target unreachable."

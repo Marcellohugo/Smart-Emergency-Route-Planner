@@ -49,7 +49,7 @@ namespace SmartEmergencyRoutePlanner.Algorithms
                 // Run Dijkstra with penalties
                 var altResult = dijkstra.Solve(graph, source, target, emergencyMode, penalizedEdges);
                 altResult.AlgorithmName = step == 2 ? "Alternative Route (Backup)" : $"Route {step} (Alternative)";
-                
+
                 if (altResult.IsReachable && altResult.Path.Count > 0)
                 {
                     results.Add(altResult);

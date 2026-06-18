@@ -1,0 +1,22 @@
+@namespace SmartEmergencyRoutePlanner.Components
+
+<div class="console-panel">
+    <div class="console-header">
+        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-terminal"><polyline points="4 17 10 11 4 5" /><line x1="12" y1="19" x2="20" y2="19" /></svg>
+        <span>Aktivitas Sistem &amp; Langkah Logika Rute</span>
+        <button class="text-button" @onclick="OnRunCorrectnessTests" style="margin-right: 12px; border: 1px solid var(--bg-card-border); padding: 2px 8px; border-radius: 4px;">Jalankan Tes Unit</button>
+        <button class="text-button" @onclick="OnClearConsole">Bersihkan</button>
+    </div>
+    <div class="console-log" id="consoleLog">
+        @foreach (var log in Logs)
+        {
+            <div class="log-entry @log.Class">@log.Text</div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public IReadOnlyList<LogEntry> Logs { get; set; } = Array.Empty<LogEntry>();
+    [Parameter] public EventCallback OnRunCorrectnessTests { get; set; }
+    [Parameter] public EventCallback OnClearConsole { get; set; }
+}

@@ -193,7 +193,7 @@ namespace SmartEmergencyRoutePlanner.Benchmark
                 double distDiff = Math.Abs(resD.TotalTravelTimeMinutes - resA.TotalTravelTimeMinutes);
                 bool sameDist = distDiff < 1e-5;
                 bool biEqualsDijk = Math.Abs(resD.TotalTravelTimeMinutes - resBi.TotalTravelTimeMinutes) < 1e-5;
-                
+
                 double aStarSpeedup = avgAMs > 0 ? avgDMs / avgAMs : 0;
                 double biDijkSpeedup = avgBiMs > 0 ? avgDMs / avgBiMs : 0;
                 double nodeReductionPercent = resD.ExpandedNodes > 0
@@ -294,7 +294,7 @@ namespace SmartEmergencyRoutePlanner.Benchmark
         {
             // Group cases by family for separate exponents
             var families = new[] { GraphFamily.RandomSparse, GraphFamily.GridCity };
-            
+
             Console.WriteLine("\n==================================================");
             Console.WriteLine("            EMPIRICAL GROWTH EXPONENTS            ");
             Console.WriteLine("               (Model: time ~ a*V^b)              ");
@@ -326,7 +326,7 @@ namespace SmartEmergencyRoutePlanner.Benchmark
                 double dijkExp = EmpiricalGrowthAnalyzer.EstimateExponent(vList, dijkTimes);
                 double astarExp = EmpiricalGrowthAnalyzer.EstimateExponent(vList, astarTimes);
                 double bidijkExp = EmpiricalGrowthAnalyzer.EstimateExponent(vList, bidijkTimes);
-                
+
                 Console.WriteLine($"Family: {family}");
                 Console.WriteLine($"  * Dijkstra Exponent (b)       : {dijkExp:F4} (Theoretical: O(V log V) ~ 1.0 - 1.1)");
                 Console.WriteLine($"  * A* Search Exponent (b)      : {astarExp:F4}");

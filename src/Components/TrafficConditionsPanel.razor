@@ -1,0 +1,82 @@
+@namespace SmartEmergencyRoutePlanner.Components
+
+<div class="control-card">
+    <div class="card-header">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-activity"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" /></svg>
+        <h2>Kondisi Lalu Lintas</h2>
+    </div>
+    <div class="card-body">
+        <div class="toggle-group">
+            <label class="toggle-switch">
+                <input type="checkbox" id="emergencyMode" checked="@EmergencyMode" @onchange="SetEmergencyMode">
+                <span class="slider round"></span>
+            </label>
+            <div class="toggle-text">
+                <span class="toggle-title">Jalur Darurat Ambulans Aktif</span>
+                <span class="toggle-desc">Mempersingkat rute jalan raya khusus</span>
+            </div>
+        </div>
+
+        <div class="form-group mt-1">
+            <label for="trafficLevel">Tingkat Kemacetan Kota</label>
+            <select id="trafficLevel" value="@SelectedTrafficLevel" @onchange="SetSelectedTrafficLevel">
+                <option value="Normal">Lalu Lintas Normal</option>
+                <option value="Severe">Kemacetan Total / Jam Sibuk</option>
+                <option value="Random">Kemacetan Bervariasi (Acak)</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="timePeriod">Faktor Keterlambatan Waktu</label>
+            <div class="slider-val-container">
+                <input type="range" id="timePeriod" min="0.5" max="2.0" step="0.1" value="@TimePeriod" @onchange="SetTimePeriod">
+                <span>@(TimePeriod.ToString("F1"))x</span>
+            </div>
+        </div>
+
+        <div class="form-row mt-1">
+            <button class="secondary-button half" @onclick="OnCloseRandomRoads">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-lock"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg> Tutup 10% Jalan
+            </button>
+            <button class="secondary-button half" @onclick="OnResetRoadClosures">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-unlock"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 9.9-1" /></svg> Buka Jalur
+            </button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public bool EmergencyMode { get; set; }
+    [Parameter] public EventCallback<bool> EmergencyModeChanged { get; set; }
+    [Parameter] public string SelectedTrafficLevel { get; set; } = "Normal";
+    [Parameter] public EventCallback<string> SelectedTrafficLevelChanged { get; set; }
+    [Parameter] public double TimePeriod { get; set; }
+    [Parameter] public EventCallback<double> TimePeriodChanged { get; set; }
+    [Parameter] public EventCallback OnEmergencyModeChanged { get; set; }
+    [Parameter] public EventCallback OnTrafficConditionsChanged { get; set; }
+    [Parameter] public EventCallback OnTimeFactorChanged { get; set; }
+    [Parameter] public EventCallback OnCloseRandomRoads { get; set; }
+    [Parameter] public EventCallback OnResetRoadClosures { get; set; }
+
+    private async Task SetEmergencyMode(ChangeEventArgs e)
+    {
+        bool value = e.Value is bool boolValue && boolValue;
+        await EmergencyModeChanged.InvokeAsync(value);
+        await OnEmergencyModeChanged.InvokeAsync();
+    }
+
+    private async Task SetSelectedTrafficLevel(ChangeEventArgs e)
+    {
+        await SelectedTrafficLevelChanged.InvokeAsync(e.Value?.ToString() ?? "Normal");
+        await OnTrafficConditionsChanged.InvokeAsync();
+    }
+
+    private async Task SetTimePeriod(ChangeEventArgs e)
+    {
+        if (double.TryParse(e.Value?.ToString(), out double value))
+        {
+            await TimePeriodChanged.InvokeAsync(value);
+            await OnTimeFactorChanged.InvokeAsync();
+        }
+    }
+}

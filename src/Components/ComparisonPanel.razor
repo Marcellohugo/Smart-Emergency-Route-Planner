@@ -1,0 +1,105 @@
+@namespace SmartEmergencyRoutePlanner.Components
+@using SmartEmergencyRoutePlanner.Models
+
+<div class="floating-panel">
+    <div class="panel-tabs">
+        <button class="tab-btn @(ActiveTab == "compare" ? "active" : "")" @onclick='() => SetActiveTab("compare")'>Perbandingan Metode</button>
+        <button class="tab-btn @(ActiveTab == "hospitals" ? "active" : "")" @onclick='() => SetActiveTab("hospitals")'>RS Terdekat</button>
+    </div>
+
+    <div class="tab-content @(ActiveTab == "compare" ? "active" : "")">
+        <table class="analytics-table">
+            <thead>
+                <tr>
+                    <th>Metode</th>
+                    <th>Waktu</th>
+                    <th>Eksplorasi</th>
+                    <th>Efisiensi</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (ComparisonResults.Count == 0)
+                {
+                    <tr>
+                        <td colspan="4" class="empty-table-msg">Mengalkulasi perbandingan metode...</td>
+                    </tr>
+                }
+                else
+                {
+                    @foreach (var result in ComparisonResults)
+                    {
+                        var isSelected = result.AlgorithmName.Contains(ActiveSolver, StringComparison.OrdinalIgnoreCase);
+                        <tr style="@(isSelected ? "background-color: #eff6ff; font-weight: 600;" : "")">
+                            <td>@result.AlgorithmName</td>
+                            <td>@(result.IsReachable ? $"{result.TotalTravelTimeMinutes:F2} m" : "Tutup")</td>
+                            <td>@result.ExpandedNodes</td>
+                            <td>@(result.IsReachable ? $"{result.RuntimeMilliseconds:F3} ms" : "--")</td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <div class="tab-content @(ActiveTab == "hospitals" ? "active" : "")">
+        <table class="analytics-table">
+            <thead>
+                <tr>
+                    <th>Rumah Sakit</th>
+                    <th>Waktu Tempuh</th>
+                    <th>Prioritas</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (HospitalNodeIds.Count == 0)
+                {
+                    <tr>
+                        <td colspan="3" class="empty-table-msg">Klik dua kali persimpangan untuk menambah Rumah Sakit.</td>
+                    </tr>
+                }
+                else
+                {
+                    @foreach (var item in HospitalDistances)
+                    {
+                        <tr>
+                            <td>@item.Name</td>
+                            <td>@(item.IsReachable ? $"{item.TravelTimeMinutes:F2} m" : "Tidak Terjangkau")</td>
+                            <td>
+                                @if (!item.IsReachable)
+                                {
+                                    <span class="priority-badge priority-closed">TERTUTUP</span>
+                                }
+                                else if (item.TravelTimeMinutes < 5.0)
+                                {
+                                    <span class="priority-badge priority-fast">UTAMA (CEPAT)</span>
+                                }
+                                else if (item.TravelTimeMinutes < 10.0)
+                                {
+                                    <span class="priority-badge priority-medium">SEDANG</span>
+                                }
+                                else
+                                {
+                                    <span class="priority-badge priority-far">JAUH</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string ActiveTab { get; set; } = "compare";
+    [Parameter] public EventCallback<string> ActiveTabChanged { get; set; }
+    [Parameter] public IReadOnlyList<PathResult> ComparisonResults { get; set; } = Array.Empty<PathResult>();
+    [Parameter] public IReadOnlyList<HospitalItem> HospitalDistances { get; set; } = Array.Empty<HospitalItem>();
+    [Parameter] public IReadOnlyList<int> HospitalNodeIds { get; set; } = Array.Empty<int>();
+    [Parameter] public string ActiveSolver { get; set; } = "Dijkstra";
+
+    private Task SetActiveTab(string tab)
+    {
+        return ActiveTabChanged.InvokeAsync(tab);
+    }
+}

@@ -1,0 +1,352 @@
+@namespace SmartEmergencyRoutePlanner.Components
+@using Microsoft.AspNetCore.Components.Web
+@using SmartEmergencyRoutePlanner.Models
+
+<div class="canvas-viewport" id="canvasViewport">
+    <svg @ref="svgRef" id="graphSvg" viewBox="@SvgViewBox"
+         @onmousemove="HandleSvgMouseMove"
+         @onmouseup="HandleSvgMouseUp"
+         @onmouseleave="HandleSvgMouseUp"
+         @onmousedown="HandleSvgMouseDown"
+         @onwheel="HandleSvgWheel"
+         @onwheel:preventDefault="true"
+         style="user-select: none; cursor: @(IsPanning ? "grabbing" : (ActiveDraggedVertexId.HasValue ? "grabbing" : "grab"));">
+
+        <defs>
+            <pattern id="gridPattern" width="50" height="50" patternUnits="userSpaceOnUse">
+                <path d="M 50 0 L 0 0 0 50" fill="none" stroke="#e2e8f0" stroke-width="0.5" />
+            </pattern>
+            <filter id="activeGlow" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur stdDeviation="5" result="blur" />
+                <feMerge>
+                    <feMergeNode in="blur" />
+                    <feMergeNode in="SourceGraphic" />
+                </feMerge>
+            </filter>
+        </defs>
+
+        <rect width="1000" height="1000" fill="url(#gridPattern)" />
+
+        @if (ActiveGraph != null)
+        {
+            @foreach (var edge in ActiveGraph.AllEdges)
+            {
+                var fromNode = ActiveGraph.GetVertex(edge.From);
+                var toNode = ActiveGraph.GetVertex(edge.To);
+                double x1 = fromNode.X * 10.0;
+                double y1 = fromNode.Y * 10.0;
+                double x2 = toNode.X * 10.0;
+                double y2 = toNode.Y * 10.0;
+
+                bool isEdgeInActivePath = IsEdgeInPath(edge.From, edge.To);
+                bool isEdgeAnimated = IsEdgeAnimated(edge.From, edge.To);
+
+                string strokeColor = "#cbd5e1";
+                string strokeWidth = "2";
+                string dashArray = "";
+                double opacity = 0.8;
+
+                if (edge.IsClosed)
+                {
+                    strokeColor = "var(--color-severe)";
+                    strokeWidth = "3";
+                    dashArray = "4,4";
+                }
+                else if (isEdgeInActivePath)
+                {
+                    strokeColor = ActiveSolver == "MultiHospital" ? "var(--color-hospital)" : "var(--color-primary)";
+                    strokeWidth = "5";
+                }
+                else if (isEdgeAnimated)
+                {
+                    strokeColor = "var(--color-warning)";
+                    strokeWidth = "4";
+                }
+                else
+                {
+                    if (edge.Traffic == TrafficLevel.High)
+                    {
+                        strokeColor = "var(--color-warning)";
+                        strokeWidth = "3";
+                    }
+                    else if (edge.Traffic == TrafficLevel.Severe)
+                    {
+                        strokeColor = "var(--color-severe)";
+                        strokeWidth = "3.5";
+                    }
+                    else if (edge.Traffic == TrafficLevel.Low)
+                    {
+                        strokeColor = "#93c5fd";
+                    }
+
+                    if (edge.HasEmergencyLane && EmergencyMode)
+                    {
+                        dashArray = "10,3";
+                    }
+                }
+
+                <line x1="@x1" y1="@y1" x2="@x2" y2="@y2"
+                      stroke="@strokeColor"
+                      stroke-width="@strokeWidth"
+                      stroke-dasharray="@dashArray"
+                      opacity="@opacity"
+                      filter="@(isEdgeInActivePath ? "url(#activeGlow)" : "")"
+                      style="transition: stroke 0.1s ease, stroke-width 0.1s ease;" />
+
+                @if (ActiveSolver == "Yen" || ActiveSolver == "Alternative")
+                {
+                    @for (int kIdx = 1; kIdx < AlternativePaths.Count; kIdx++)
+                    {
+                        var altPath = AlternativePaths[kIdx];
+                        if (IsEdgeInAlternativePath(altPath.Path, edge.From, edge.To))
+                        {
+                            <line x1="@x1" y1="@y1" x2="@x2" y2="@y2"
+                                  stroke="var(--color-accent)"
+                                  stroke-width="3.5"
+                                  stroke-dasharray="3,3"
+                                  opacity="0.7" />
+                        }
+                    }
+                }
+
+                <line x1="@x1" y1="@y1" x2="@x2" y2="@y2"
+                      stroke="transparent"
+                      stroke-width="12"
+                      style="cursor: pointer;"
+                      @onclick="() => OnToggleEdgeClosure?.Invoke(edge)"
+                      @onmouseover="(e) => OnEdgeMouseOver?.Invoke(e, edge)"
+                      @onmouseout="() => OnEdgeMouseOut?.Invoke()" />
+            }
+        }
+
+        @if (IsAnimating)
+        {
+            @foreach (var nodeId in AnimatedVisitedNodes)
+            {
+                var node = ActiveGraph?.GetVertex(nodeId);
+                if (node != null)
+                {
+                    <circle cx="@(node.X * 10.0)" cy="@(node.Y * 10.0)" r="12" fill="var(--color-warning)" opacity="0.3" />
+                }
+            }
+        }
+
+        @if (ActiveGraph != null)
+        {
+            @foreach (var vertex in ActiveGraph.Vertices)
+            {
+                double cx = vertex.X * 10.0;
+                double cy = vertex.Y * 10.0;
+                string fill = "#475569";
+                double radius = 7.0;
+                string stroke = "#ffffff";
+                string strokeWidth = "2";
+                bool isSpecial = false;
+
+                if (vertex.Id == SourceNodeId)
+                {
+                    fill = "var(--color-primary)";
+                    radius = 10.0;
+                    strokeWidth = "3";
+                    isSpecial = true;
+                }
+                else if (vertex.Id == TargetNodeId)
+                {
+                    fill = "var(--color-target)";
+                    radius = 10.0;
+                    strokeWidth = "3";
+                    isSpecial = true;
+                }
+                else if (HospitalNodeIds.Contains(vertex.Id))
+                {
+                    fill = "var(--color-hospital)";
+                    radius = 9.0;
+                    strokeWidth = "2.5";
+                    isSpecial = true;
+                }
+                else if (IsNodeInActivePath(vertex.Id))
+                {
+                    fill = "#60a5fa";
+                    radius = 8.0;
+                }
+
+                if (HoveredVertexId == vertex.Id)
+                {
+                    radius += 2.0;
+                    stroke = "var(--color-primary)";
+                }
+
+                <circle cx="@cx" cy="@cy" r="@radius"
+                        fill="@fill"
+                        stroke="@stroke"
+                        stroke-width="@strokeWidth"
+                        style="cursor: grab;"
+                        @onmousedown="(e) => OnNodeMouseDown?.Invoke(e, vertex.Id)"
+                        @onmousedown:stopPropagation="true"
+                        @ondblclick="() => OnToggleHospitalStatus?.Invoke(vertex.Id)"
+                        @ondblclick:stopPropagation="true"
+                        @oncontextmenu="() => OnSetTargetNode?.Invoke(vertex.Id)"
+                        @oncontextmenu:preventDefault
+                        @oncontextmenu:stopPropagation="true"
+                        @onmouseover="() => OnNodeMouseOver?.Invoke(vertex.Id)"
+                        @onmouseout="() => OnNodeMouseOut?.Invoke()" />
+
+                @if (isSpecial || HoveredVertexId == vertex.Id)
+                {
+                    string labelText = vertex.Id == SourceNodeId ? "MULAI (S)" :
+                                       vertex.Id == TargetNodeId ? "TUJUAN (T)" :
+                                       HospitalNodeIds.Contains(vertex.Id) ? $"RS ({vertex.Name})" :
+                                       vertex.Name;
+
+                    @((MarkupString)$"<text x='{cx}' y='{cy - (radius + 5)}' text-anchor='middle' font-family='var(--font-heading)' font-size='11' font-weight='700' fill='var(--text-primary)' style='pointer-events: none; text-shadow: 0 1px 2px rgba(255,255,255,0.8);'>{labelText}</text>")
+                }
+            }
+        }
+
+        @if (ActiveDraggedVertexId.HasValue)
+        {
+            <rect width="1000" height="1000" fill="transparent" style="cursor: grabbing;" />
+        }
+    </svg>
+
+    <div class="floating-zoom-bar">
+        <button class="icon-button" title="Zoom In" @onclick="() => OnZoomIn?.Invoke()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-plus"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+        </button>
+        <button class="icon-button" title="Zoom Out" @onclick="() => OnZoomOut?.Invoke()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-minus"><line x1="5" y1="12" x2="19" y2="12" /></svg>
+        </button>
+        <button class="icon-button" title="Reset Zoom" @onclick="() => OnResetZoom?.Invoke()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-maximize-2"><polyline points="15 3 21 3 21 9" /><polyline points="9 21 3 21 3 15" /><polyline points="21 15 21 21 15 21" /><polyline points="3 9 3 3 9 3" /><line x1="21" y1="3" x2="14" y2="10" /><line x1="3" y1="21" x2="10" y2="14" /></svg>
+        </button>
+    </div>
+
+    <ComparisonPanel ActiveTab="@ActiveTab"
+                     ActiveTabChanged="@ActiveTabChanged"
+                     ComparisonResults="@ComparisonResults"
+                     HospitalDistances="@HospitalDistances"
+                     HospitalNodeIds="@HospitalNodeIds"
+                     ActiveSolver="@ActiveSolver" />
+
+    <div class="floating-controls-bar">
+        <button class="primary-button" @onclick="() => OnSolveCurrentRoute?.Invoke()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-navigation"><polygon points="3 11 22 2 13 21 11 13 3 11" /></svg> Cari Rute
+        </button>
+        @if (!IsAnimating)
+        {
+            <button class="secondary-button" @onclick="HandleStartAnimation">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-play"><polygon points="5 3 19 12 5 21 5 3" /></svg> Animasi Rute
+            </button>
+        }
+        else
+        {
+            <button class="danger-button" @onclick="() => OnStopAnimation?.Invoke()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-square"><rect x="3" y="3" width="18" height="18" rx="2" ry="2" /></svg> Stop
+            </button>
+        }
+        <div class="divider-v"></div>
+        <div class="animation-speed-box">
+            <label for="animSpeed">Tempo</label>
+            <input type="range" id="animSpeed" min="1" max="100" value="@AnimationSpeed" @onchange="SetAnimationSpeed">
+        </div>
+    </div>
+
+    <div class="canvas-tip-overlay">
+        <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-info"><circle cx="12" cy="12" r="10" /><line x1="12" y1="16" x2="12" y2="12" /><line x1="12" y1="8" x2="12.01" y2="8" /></svg>
+        <p>Geser titik <strong>Mulai (S) / Tujuan (T)</strong>. Klik ruas jalan untuk tutup/buka. Klik 2x titik untuk RS. Klik Kanan untuk set Tujuan.</p>
+    </div>
+
+    @if (HoveredEdge != null)
+    {
+        <div class="hover-tooltip" style="left: @(TooltipX)px; top: @(TooltipY)px;">
+            <strong>Jalan Raya @(HoveredEdge.From)-@(HoveredEdge.To)</strong>
+            <span>Jarak: @(HoveredEdge.DistanceKm.ToString("F2")) km</span>
+            <span>Kecepatan: @(HoveredEdge.SpeedKmh.ToString("F1")) km/jam</span>
+            <span>Kondisi: @TranslateTraffic(HoveredEdge.Traffic)</span>
+            <span>Waktu Tempuh: @((HoveredEdge.GetWeight(EmergencyMode)).ToString("F2")) min</span>
+            @if (HoveredEdge.IsClosed)
+            {
+                <span style="color:var(--color-severe); font-weight:700;">[BLOKADE JALAN]</span>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private ElementReference svgRef;
+
+    [Parameter] public Graph? ActiveGraph { get; set; }
+    [Parameter] public string SvgViewBox { get; set; } = "0 0 1000 1000";
+    [Parameter] public bool IsPanning { get; set; }
+    [Parameter] public int? ActiveDraggedVertexId { get; set; }
+    [Parameter] public string ActiveSolver { get; set; } = "Dijkstra";
+    [Parameter] public bool EmergencyMode { get; set; }
+    [Parameter] public int SourceNodeId { get; set; }
+    [Parameter] public int TargetNodeId { get; set; }
+    [Parameter] public IReadOnlyList<int> HospitalNodeIds { get; set; } = Array.Empty<int>();
+    [Parameter] public int? HoveredVertexId { get; set; }
+    [Parameter] public Edge? HoveredEdge { get; set; }
+    [Parameter] public double TooltipX { get; set; }
+    [Parameter] public double TooltipY { get; set; }
+    [Parameter] public IReadOnlyList<PathResult> AlternativePaths { get; set; } = Array.Empty<PathResult>();
+    [Parameter] public IReadOnlyList<PathResult> ComparisonResults { get; set; } = Array.Empty<PathResult>();
+    [Parameter] public IReadOnlyList<HospitalItem> HospitalDistances { get; set; } = Array.Empty<HospitalItem>();
+    [Parameter] public string ActiveTab { get; set; } = "compare";
+    [Parameter] public EventCallback<string> ActiveTabChanged { get; set; }
+    [Parameter] public bool IsAnimating { get; set; }
+    [Parameter] public int AnimationSpeed { get; set; }
+    [Parameter] public EventCallback<int> AnimationSpeedChanged { get; set; }
+    [Parameter] public IReadOnlyList<int> AnimatedVisitedNodes { get; set; } = Array.Empty<int>();
+    [Parameter] public IReadOnlyList<int> AnimatedPathNodes { get; set; } = Array.Empty<int>();
+    [Parameter] public IReadOnlyList<(int From, int To)> AnimatedPathEdges { get; set; } = Array.Empty<(int From, int To)>();
+    [Parameter] public Func<int, bool>? IsNodeInActivePathEvaluator { get; set; }
+    [Parameter] public Func<int, int, bool>? IsEdgeInPathEvaluator { get; set; }
+    [Parameter] public Func<List<int>?, int, int, bool>? IsEdgeInAlternativePathEvaluator { get; set; }
+    [Parameter] public Func<int, int, bool>? IsEdgeAnimatedEvaluator { get; set; }
+    [Parameter] public Func<TrafficLevel, string>? TranslateTrafficEvaluator { get; set; }
+    [Parameter] public Action<ElementReference>? OnSvgReferenceChanged { get; set; }
+    [Parameter] public Func<MouseEventArgs, Task>? OnSvgMouseMove { get; set; }
+    [Parameter] public Action? OnSvgMouseUp { get; set; }
+    [Parameter] public Action<MouseEventArgs>? OnSvgMouseDown { get; set; }
+    [Parameter] public Func<WheelEventArgs, Task>? OnSvgWheel { get; set; }
+    [Parameter] public Action<MouseEventArgs, int>? OnNodeMouseDown { get; set; }
+    [Parameter] public Action<int>? OnToggleHospitalStatus { get; set; }
+    [Parameter] public Action<int>? OnSetTargetNode { get; set; }
+    [Parameter] public Action<int>? OnNodeMouseOver { get; set; }
+    [Parameter] public Action? OnNodeMouseOut { get; set; }
+    [Parameter] public Action<Edge>? OnToggleEdgeClosure { get; set; }
+    [Parameter] public Action<MouseEventArgs, Edge>? OnEdgeMouseOver { get; set; }
+    [Parameter] public Action? OnEdgeMouseOut { get; set; }
+    [Parameter] public Action? OnZoomIn { get; set; }
+    [Parameter] public Action? OnZoomOut { get; set; }
+    [Parameter] public Action? OnResetZoom { get; set; }
+    [Parameter] public Action? OnSolveCurrentRoute { get; set; }
+    [Parameter] public Func<Task>? OnStartAnimation { get; set; }
+    [Parameter] public Action? OnStopAnimation { get; set; }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        OnSvgReferenceChanged?.Invoke(svgRef);
+    }
+
+    private bool IsNodeInActivePath(int id) => IsNodeInActivePathEvaluator?.Invoke(id) ?? false;
+    private bool IsEdgeInPath(int from, int to) => IsEdgeInPathEvaluator?.Invoke(from, to) ?? false;
+    private bool IsEdgeInAlternativePath(List<int>? path, int from, int to) => IsEdgeInAlternativePathEvaluator?.Invoke(path, from, to) ?? false;
+    private bool IsEdgeAnimated(int from, int to) => IsEdgeAnimatedEvaluator?.Invoke(from, to) ?? false;
+    private string TranslateTraffic(TrafficLevel level) => TranslateTrafficEvaluator?.Invoke(level) ?? level.ToString();
+    private Task HandleSvgMouseMove(MouseEventArgs e) => OnSvgMouseMove?.Invoke(e) ?? Task.CompletedTask;
+    private void HandleSvgMouseUp() => OnSvgMouseUp?.Invoke();
+    private void HandleSvgMouseDown(MouseEventArgs e) => OnSvgMouseDown?.Invoke(e);
+    private Task HandleSvgWheel(WheelEventArgs e) => OnSvgWheel?.Invoke(e) ?? Task.CompletedTask;
+    private Task HandleStartAnimation() => OnStartAnimation?.Invoke() ?? Task.CompletedTask;
+
+    private Task SetAnimationSpeed(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int value))
+        {
+            return AnimationSpeedChanged.InvokeAsync(value);
+        }
+
+        return Task.CompletedTask;
+    }
+}

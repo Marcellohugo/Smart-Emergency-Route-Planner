@@ -26,7 +26,7 @@ namespace SmartEmergencyRoutePlanner.Algorithms
             foreach (int hospital in targetHospitals)
             {
                 var res = astar.Solve(graph, source, hospital, maxSpeedKmh);
-                
+
                 totalExpandedNodes += res.ExpandedNodes;
                 totalRelaxationCount += res.RelaxationCount;
 

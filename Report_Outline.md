@@ -66,8 +66,10 @@ Balances travel time against path security. Edges are assigned `ClosureRisk` ($[
 *   `Analysis/`: `EmpiricalGrowthAnalyzer` calculating least-squares regression.
 *   `Utilities/`: `Geometry`, `PathFormatter`, `CsvWriter`, and `GraphVizExporter`.
 *   `Tests/`: `AlgorithmCorrectnessTests` unit testing suite.
-*   `Program.cs`: Interactive 14-option CLI menu.
-*   `visualizer/`: Client-side visualizer files (`index.html`, `style.css`, `app.js`).
+*   `Program.cs`: Blazor WebAssembly bootstrap and root component registration.
+*   `Pages/Home.razor`: Primary interactive route-planning page orchestrator.
+*   `Components/`: Blazor panels for route configuration, traffic controls, route metrics, map canvas, comparisons, and logs.
+*   `Services/`: Route-planning application services connecting UI state to algorithm solvers.
 
 ### 2.2 Bidirectional Dijkstra Implementation Pseudocode
 ```
@@ -237,7 +239,7 @@ Raw outputs loaded from [benchmark_results.csv](file:///C:/Users/marco/Documents
 ### 4.2 Contribution Table
 *   **Member 1:** Bidirectional Dijkstra, Binary Min-heap Peek, empirical exponents fitting (33.3%).
 *   **Member 2:** Yen's exact paths, Graphviz exporter, correctness tests (33.3%).
-*   **Member 3:** Robust route solver, memory profiling, CLI and matrices (33.3%).
+*   **Member 3:** Robust route solver, memory profiling, Blazor interface, and scenario matrices (33.3%).
 
 ---
 

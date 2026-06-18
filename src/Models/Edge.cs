@@ -11,7 +11,7 @@ namespace SmartEmergencyRoutePlanner.Models
         public bool IsClosed { get; set; }
         public TrafficLevel Traffic { get; set; }
         public double TrafficMultiplier { get; set; }
-        
+
         // Phase 2 Advanced Properties
         public double TimePeriodMultiplier { get; set; }
         public bool HasEmergencyLane { get; set; }
@@ -28,7 +28,7 @@ namespace SmartEmergencyRoutePlanner.Models
             DistanceKm = distanceKm;
             SpeedKmh = speedKmh;
             TravelTimeMinutes = (distanceKm / speedKmh) * 60.0;
-            
+
             IsClosed = false;
             Traffic = TrafficLevel.Normal;
             TrafficMultiplier = 1.0;
