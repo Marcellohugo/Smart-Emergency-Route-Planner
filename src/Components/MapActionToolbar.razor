@@ -1,0 +1,43 @@
+@namespace SmartEmergencyRoutePlanner.Components
+
+<div class="floating-controls-bar">
+    <button class="primary-button" @onclick="OnSolveCurrentRoute">
+        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-navigation"><polygon points="3 11 22 2 13 21 11 13 3 11" /></svg> Cari Rute
+    </button>
+    @if (!IsAnimating)
+    {
+        <button class="secondary-button" @onclick="OnStartAnimation">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-play"><polygon points="5 3 19 12 5 21 5 3" /></svg> Animasi Rute
+        </button>
+    }
+    else
+    {
+        <button class="danger-button" @onclick="OnStopAnimation">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-square"><rect x="3" y="3" width="18" height="18" rx="2" ry="2" /></svg> Stop
+        </button>
+    }
+    <div class="divider-v"></div>
+    <div class="animation-speed-box">
+        <label for="animSpeed">Tempo</label>
+        <input type="range" id="animSpeed" min="1" max="100" value="@AnimationSpeed" @onchange="SetAnimationSpeed">
+    </div>
+</div>
+
+@code {
+    [Parameter] public bool IsAnimating { get; set; }
+    [Parameter] public int AnimationSpeed { get; set; }
+    [Parameter] public EventCallback<int> AnimationSpeedChanged { get; set; }
+    [Parameter] public EventCallback OnSolveCurrentRoute { get; set; }
+    [Parameter] public EventCallback OnStartAnimation { get; set; }
+    [Parameter] public EventCallback OnStopAnimation { get; set; }
+
+    private Task SetAnimationSpeed(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int value))
+        {
+            return AnimationSpeedChanged.InvokeAsync(value);
+        }
+
+        return Task.CompletedTask;
+    }
+}

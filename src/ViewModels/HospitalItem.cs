@@ -1,4 +1,4 @@
-namespace SmartEmergencyRoutePlanner;
+namespace SmartEmergencyRoutePlanner.ViewModels;
 
 public sealed class HospitalItem
 {

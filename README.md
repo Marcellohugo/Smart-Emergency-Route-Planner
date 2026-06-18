@@ -19,6 +19,7 @@ src/
 ├── Pages/           # Blazor page orchestration
 ├── Services/        # Route-planning application services
 ├── Tests/           # Self-contained correctness suite
+├── ViewModels/      # UI-only data records for panels and logs
 └── Program.cs       # Blazor WebAssembly bootstrap
 wwwroot/             # Blazor static assets
 bench/               # Benchmark CSV outputs

@@ -66,9 +66,10 @@ Balances travel time against path security. Edges are assigned `ClosureRisk` ($[
 *   `Analysis/`: `EmpiricalGrowthAnalyzer` calculating least-squares regression.
 *   `Utilities/`: `Geometry`, `PathFormatter`, `CsvWriter`, and `GraphVizExporter`.
 *   `Tests/`: `AlgorithmCorrectnessTests` unit testing suite.
+*   `ViewModels/`: UI-only records for hospital rows, logs, and SVG coordinate projections.
 *   `Program.cs`: Blazor WebAssembly bootstrap and root component registration.
-*   `Pages/Home.razor`: Primary interactive route-planning page orchestrator.
-*   `Components/`: Blazor panels for route configuration, traffic controls, route metrics, map canvas, comparisons, and logs.
+*   `Pages/Home.razor`: Primary interactive route-planning page orchestrator, split into partial code-behind files for routing, traffic, map interaction, animation, logging, and formatting.
+*   `Components/`: Blazor panels for route configuration, traffic controls, route metrics, SVG map canvas, comparisons, logs, map actions, zoom controls, and tooltips.
 *   `Services/`: Route-planning application services connecting UI state to algorithm solvers.
 
 ### 2.2 Bidirectional Dijkstra Implementation Pseudocode
@@ -174,10 +175,12 @@ Slope $b$ represents the empirical growth exponent, calculated in `EmpiricalGrow
 Allocated memory is measured via:
 $$\text{MemoryUsedBytes} = \text{GC.GetTotalMemory(true)}_{\text{after}} - \text{GC.GetTotalMemory(true)}_{\text{before}}$$
 
-### 2.6 Interactive Web Visualizer Architecture
-*   **Canvas Rendering Engine:** Custom double-buffering HTML5 Canvas rendering directed edges, anti-parallel edge offset splits, and color-coded traffic level paths.
-*   **Generator Solver yields:** Pathfinding routines written in JavaScript as Generator functions (`function*`). Relaxes a single node/edge per step, enabling smooth visualization frame rendering.
-*   **Interactive Inputs:** Real-time drag handlers updating vertex coordinates, recalculating connected Euclidean edge weights in real-time, double-click toggles for hospital placements, and live slider modulations.
+### 2.6 Interactive Blazor UI Architecture
+*   **Blazor WebAssembly Shell:** The project uses a single Blazor UI surface backed by C# services and algorithm classes.
+*   **SVG Map Renderer:** `MapCanvasPanel` renders directed edges, anti-parallel edge offsets, traffic styling, hospitals, source/target markers, and active routes as responsive SVG.
+*   **State Orchestration:** `Home.razor` owns UI state while partial code-behind files isolate routing, traffic, interaction, animation, logging, and formatting behavior.
+*   **Route Planning Service:** `RoutePlannerService` chooses solvers, compares algorithms, validates active paths with Bellman-Ford, and keeps solver decisions outside UI markup.
+*   **Interactive Inputs:** Blazor event handlers support source/target selection, hospital toggles, road closures, zoom/pan, traffic adjustments, route animation, and correctness-test execution.
 
 ---
 
@@ -223,7 +226,7 @@ $$\text{MemoryUsedBytes} = \text{GC.GetTotalMemory(true)}_{\text{after}} - \text
 *   Demonstrates how road closures block edge relaxation, forcing real-time visual detours around disabled segments.
 
 ### 3.9 Benchmark Results Table
-Raw outputs loaded from [benchmark_results.csv](file:///C:/Users/marco/Documents/Sourcecode/Smart-Emergency-Route-Planner/bench/benchmark_results.csv).
+Raw outputs are stored in `bench/benchmark_results.csv`.
 
 `[Insert CSV table data here]`
 

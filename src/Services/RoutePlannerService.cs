@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using SmartEmergencyRoutePlanner.Algorithms;
 using SmartEmergencyRoutePlanner.Models;
+using SmartEmergencyRoutePlanner.ViewModels;
 
 namespace SmartEmergencyRoutePlanner.Services;
 

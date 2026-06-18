@@ -1,0 +1,25 @@
+@namespace SmartEmergencyRoutePlanner.Components
+@using SmartEmergencyRoutePlanner.Models
+
+@if (Edge != null)
+{
+    <div class="hover-tooltip" style="left: @(X)px; top: @(Y)px;">
+        <strong>Jalan Raya @(Edge.From)-@(Edge.To)</strong>
+        <span>Jarak: @(Edge.DistanceKm.ToString("F2")) km</span>
+        <span>Kecepatan: @(Edge.SpeedKmh.ToString("F1")) km/jam</span>
+        <span>Kondisi: @TranslateTraffic(Edge.Traffic)</span>
+        <span>Waktu Tempuh: @((Edge.GetWeight(EmergencyMode)).ToString("F2")) min</span>
+        @if (Edge.IsClosed)
+        {
+            <span style="color:var(--color-severe); font-weight:700;">[BLOKADE JALAN]</span>
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public Edge? Edge { get; set; }
+    [Parameter] public double X { get; set; }
+    [Parameter] public double Y { get; set; }
+    [Parameter] public bool EmergencyMode { get; set; }
+    [Parameter] public Func<TrafficLevel, string> TranslateTraffic { get; set; } = level => level.ToString();
+}
