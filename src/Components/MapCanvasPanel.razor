@@ -15,7 +15,7 @@
 
         <defs>
             <pattern id="gridPattern" width="50" height="50" patternUnits="userSpaceOnUse">
-                <path d="M 50 0 L 0 0 0 50" fill="none" stroke="#e2e8f0" stroke-width="0.5" />
+                <path d="M 50 0 L 0 0 0 50" fill="none" stroke="#f1f5f9" stroke-width="0.5" />
             </pattern>
             <filter id="activeGlow" x="-20%" y="-20%" width="140%" height="140%">
                 <feGaussianBlur stdDeviation="5" result="blur" />
@@ -42,10 +42,10 @@
                 bool isEdgeInActivePath = IsEdgeInPath(edge.From, edge.To);
                 bool isEdgeAnimated = IsEdgeAnimated(edge.From, edge.To);
 
-                string strokeColor = "#cbd5e1";
-                string strokeWidth = "2";
+                string strokeColor = "#94a3b8";
+                string strokeWidth = "2.5";
                 string dashArray = "";
-                double opacity = 0.8;
+                double opacity = 0.9;
 
                 if (edge.IsClosed)
                 {
@@ -138,8 +138,8 @@
             {
                 double cx = vertex.X * 10.0;
                 double cy = vertex.Y * 10.0;
-                string fill = "#475569";
-                double radius = 7.0;
+                string fill = "#64748b";
+                double radius = 8.0;
                 string stroke = "#ffffff";
                 string strokeWidth = "2";
                 bool isSpecial = false;

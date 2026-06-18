@@ -7,6 +7,32 @@ namespace SmartEmergencyRoutePlanner.Generators
 {
     public class CityGraphGenerator
     {
+        private class UnionFind
+        {
+            private readonly int[] parent;
+            public UnionFind(int n)
+            {
+                parent = new int[n];
+                for (int i = 0; i < n; i++) parent[i] = i;
+            }
+            public int Find(int i)
+            {
+                if (parent[i] == i) return i;
+                return parent[i] = Find(parent[i]);
+            }
+            public bool Union(int i, int j)
+            {
+                int rootI = Find(i);
+                int rootJ = Find(j);
+                if (rootI != rootJ)
+                {
+                    parent[rootI] = rootJ;
+                    return true;
+                }
+                return false;
+            }
+        }
+
         /// <summary>
         /// Generates a synthetic city road graph network belonging to a specific graph family.
         /// </summary>
@@ -20,12 +46,15 @@ namespace SmartEmergencyRoutePlanner.Generators
             var graph = new Graph(vertexCount);
             var random = new Random(seed);
 
+            int rows = 0;
+            int cols = 0;
+
             // 1. Generate Vertex Coordinates based on Family
             if (family == GraphFamily.GridCity)
             {
-                int rows = (int)Math.Sqrt(vertexCount);
+                rows = (int)Math.Sqrt(vertexCount);
                 if (rows < 2) rows = 2;
-                int cols = (int)Math.Ceiling((double)vertexCount / rows);
+                cols = (int)Math.Ceiling((double)vertexCount / rows);
 
                 for (int i = 0; i < vertexCount; i++)
                 {
@@ -75,107 +104,191 @@ namespace SmartEmergencyRoutePlanner.Generators
                 edge.TrafficRisk = random.NextDouble() * 0.3;       // Traffic risk: [0.0, 0.3]
             }
 
-            // 2. Build Backbone path
-            for (int i = 0; i < vertexCount - 1; i++)
+            void AddBidirectionalOrSingleEdge(int u, int v)
             {
-                int from = i;
-                int to = i + 1;
-                double distance = Geometry.CalculateEuclideanDistance(graph.GetVertex(from), graph.GetVertex(to));
-                double speed = 20.0 + (random.NextDouble() * 80.0);
+                if (currentEdgeCount >= edgeCount) return;
 
-                var edge = graph.AddEdge(from, to, distance, speed);
-                PopulateAdvancedProperties(edge);
-                existingEdges.Add((from, to));
-                currentEdgeCount++;
+                if (!existingEdges.Contains((u, v)))
+                {
+                    double distance = Geometry.CalculateEuclideanDistance(graph.GetVertex(u), graph.GetVertex(v));
+                    double speed = 20.0 + (random.NextDouble() * 80.0);
+                    var edge = graph.AddEdge(u, v, distance, speed);
+                    PopulateAdvancedProperties(edge);
+                    existingEdges.Add((u, v));
+                    currentEdgeCount++;
+                }
+
+                if (currentEdgeCount < edgeCount && !existingEdges.Contains((v, u)))
+                {
+                    double distance = Geometry.CalculateEuclideanDistance(graph.GetVertex(v), graph.GetVertex(u));
+                    double speed = 20.0 + (random.NextDouble() * 80.0);
+                    var edge = graph.AddEdge(v, u, distance, speed);
+                    PopulateAdvancedProperties(edge);
+                    existingEdges.Add((v, u));
+                    currentEdgeCount++;
+                }
             }
 
-            long maxPossibleEdges = (long)vertexCount * (vertexCount - 1);
-            long targetEdges = Math.Min(edgeCount, maxPossibleEdges);
+            // Union-Find and Potential Edges setup
+            var uf = new UnionFind(vertexCount);
+            var mstUndirectedEdges = new List<(int u, int v)>();
+            var potentialUndirectedEdges = new List<(int u, int v, double weight)>();
 
-            // 3. Add topology specific edges
             if (family == GraphFamily.GridCity)
             {
-                int rows = (int)Math.Sqrt(vertexCount);
-                if (rows < 2) rows = 2;
-                int cols = (int)Math.Ceiling((double)vertexCount / rows);
 
-                // Add grid neighbor lines
+                // Collect grid-neighbor edges (horizontal & vertical)
                 for (int i = 0; i < vertexCount; i++)
                 {
-                    if (currentEdgeCount >= targetEdges) break;
                     int r = i / cols;
                     int c = i % cols;
 
-                    int[] neighbors = {
-                        c + 1 < cols && i + 1 < vertexCount ? i + 1 : -1,
-                        r + 1 < rows && i + cols < vertexCount ? i + cols : -1,
-                        c - 1 >= 0 && i - 1 >= 0 ? i - 1 : -1,
-                        r - 1 >= 0 && i - cols >= 0 ? i - cols : -1
-                    };
-
-                    foreach (int nb in neighbors)
+                    if (c + 1 < cols && i + 1 < vertexCount)
                     {
-                        if (nb != -1 && nb != i && !existingEdges.Contains((i, nb)))
-                        {
-                            if (currentEdgeCount >= targetEdges) break;
-                            double distance = Geometry.CalculateEuclideanDistance(graph.GetVertex(i), graph.GetVertex(nb));
-                            double speed = 20.0 + (random.NextDouble() * 80.0);
-                            var edge = graph.AddEdge(i, nb, distance, speed);
-                            PopulateAdvancedProperties(edge);
-                            existingEdges.Add((i, nb));
-                            currentEdgeCount++;
-                        }
+                        double dist = Geometry.CalculateEuclideanDistance(graph.GetVertex(i), graph.GetVertex(i + 1));
+                        potentialUndirectedEdges.Add((i, i + 1, dist));
+                    }
+                    if (r + 1 < rows && i + cols < vertexCount)
+                    {
+                        double dist = Geometry.CalculateEuclideanDistance(graph.GetVertex(i), graph.GetVertex(i + cols));
+                        potentialUndirectedEdges.Add((i, i + cols, dist));
                     }
                 }
 
-                // Add diagonal links
+                // Shuffle grid-neighbors to make random-looking spanning trees
+                for (int i = potentialUndirectedEdges.Count - 1; i > 0; i--)
+                {
+                    int j = random.Next(i + 1);
+                    var temp = potentialUndirectedEdges[i];
+                    potentialUndirectedEdges[i] = potentialUndirectedEdges[j];
+                    potentialUndirectedEdges[j] = temp;
+                }
+            }
+            else
+            {
+                // Collect all possible pairs of vertices
                 for (int i = 0; i < vertexCount; i++)
                 {
-                    if (currentEdgeCount >= targetEdges) break;
-                    int r = i / cols;
-                    int c = i % cols;
-
-                    int[] diagonals = {
-                        r + 1 < rows && c + 1 < cols && i + cols + 1 < vertexCount ? i + cols + 1 : -1,
-                        r + 1 < rows && c - 1 >= 0 && i + cols - 1 < vertexCount ? i + cols - 1 : -1,
-                        r - 1 >= 0 && c + 1 < cols && i - cols + 1 >= 0 ? i - cols + 1 : -1,
-                        r - 1 >= 0 && c - 1 >= 0 && i - cols - 1 >= 0 ? i - cols - 1 : -1
-                    };
-
-                    foreach (int dg in diagonals)
+                    for (int j = i + 1; j < vertexCount; j++)
                     {
-                        if (dg != -1 && dg != i && !existingEdges.Contains((i, dg)))
+                        double dist = Geometry.CalculateEuclideanDistance(graph.GetVertex(i), graph.GetVertex(j));
+                        potentialUndirectedEdges.Add((i, j, dist));
+                    }
+                }
+
+                // Sort by Euclidean distance to connect nearby nodes first
+                potentialUndirectedEdges.Sort((a, b) => a.weight.CompareTo(b.weight));
+            }
+
+            // Build MST to guarantee connectivity
+            var selectedMstEdges = new HashSet<(int u, int v)>();
+            foreach (var edge in potentialUndirectedEdges)
+            {
+                if (uf.Union(edge.u, edge.v))
+                {
+                    mstUndirectedEdges.Add((edge.u, edge.v));
+                    selectedMstEdges.Add((edge.u, edge.v));
+                }
+            }
+
+            // First pass: add MST edges in forward direction (weak connectivity)
+            foreach (var edge in mstUndirectedEdges)
+            {
+                if (currentEdgeCount >= edgeCount) break;
+                if (!existingEdges.Contains((edge.u, edge.v)))
+                {
+                    double distance = Geometry.CalculateEuclideanDistance(graph.GetVertex(edge.u), graph.GetVertex(edge.v));
+                    double speed = 20.0 + (random.NextDouble() * 80.0);
+                    var newEdge = graph.AddEdge(edge.u, edge.v, distance, speed);
+                    PopulateAdvancedProperties(newEdge);
+                    existingEdges.Add((edge.u, edge.v));
+                    currentEdgeCount++;
+                }
+            }
+
+            // Second pass: add MST edges in reverse direction (bidirectional strong connectivity)
+            foreach (var edge in mstUndirectedEdges)
+            {
+                if (currentEdgeCount >= edgeCount) break;
+                if (!existingEdges.Contains((edge.v, edge.u)))
+                {
+                    double distance = Geometry.CalculateEuclideanDistance(graph.GetVertex(edge.v), graph.GetVertex(edge.u));
+                    double speed = 20.0 + (random.NextDouble() * 80.0);
+                    var newEdge = graph.AddEdge(edge.v, edge.u, distance, speed);
+                    PopulateAdvancedProperties(newEdge);
+                    existingEdges.Add((edge.v, edge.u));
+                    currentEdgeCount++;
+                }
+            }
+
+            // Fill remaining edges with non-MST potential edges
+            if (family == GraphFamily.GridCity)
+            {
+                // Add remaining non-MST grid edges first
+                foreach (var edge in potentialUndirectedEdges)
+                {
+                    if (currentEdgeCount >= edgeCount) break;
+                    if (!selectedMstEdges.Contains((edge.u, edge.v)))
+                    {
+                        AddBidirectionalOrSingleEdge(edge.u, edge.v);
+                    }
+                }
+
+                // If budget permits, add diagonal connections
+                if (currentEdgeCount < edgeCount)
+                {
+                    var diagonals = new List<(int u, int v)>();
+                    for (int i = 0; i < vertexCount; i++)
+                    {
+                        int r = i / cols;
+                        int c = i % cols;
+
+                        if (r + 1 < rows && c + 1 < cols && i + cols + 1 < vertexCount)
                         {
-                            if (currentEdgeCount >= targetEdges) break;
-                            double distance = Geometry.CalculateEuclideanDistance(graph.GetVertex(i), graph.GetVertex(dg));
-                            double speed = 20.0 + (random.NextDouble() * 80.0);
-                            var edge = graph.AddEdge(i, dg, distance, speed);
-                            PopulateAdvancedProperties(edge);
-                            existingEdges.Add((i, dg));
-                            currentEdgeCount++;
+                            diagonals.Add((i, i + cols + 1));
                         }
+                        if (r + 1 < rows && c - 1 >= 0 && i + cols - 1 < vertexCount)
+                        {
+                            diagonals.Add((i, i + cols - 1));
+                        }
+                    }
+
+                    // Shuffle diagonals
+                    for (int i = diagonals.Count - 1; i > 0; i--)
+                    {
+                        int j = random.Next(i + 1);
+                        var temp = diagonals[i];
+                        diagonals[i] = diagonals[j];
+                        diagonals[j] = temp;
+                    }
+
+                    foreach (var edge in diagonals)
+                    {
+                        if (currentEdgeCount >= edgeCount) break;
+                        AddBidirectionalOrSingleEdge(edge.u, edge.v);
+                    }
+                }
+            }
+            else
+            {
+                // For random sparse/medium, add remaining edges in order of Euclidean distance
+                foreach (var edge in potentialUndirectedEdges)
+                {
+                    if (currentEdgeCount >= edgeCount) break;
+                    if (!selectedMstEdges.Contains((edge.u, edge.v)))
+                    {
+                        AddBidirectionalOrSingleEdge(edge.u, edge.v);
                     }
                 }
             }
 
-            // 4. Fill in remaining edges randomly
-            while (currentEdgeCount < targetEdges)
+            // If still have budget, fill in random edges
+            while (currentEdgeCount < edgeCount)
             {
                 int from = random.Next(vertexCount);
                 int to = random.Next(vertexCount);
-
-                if (from == to || existingEdges.Contains((from, to)))
-                {
-                    continue;
-                }
-
-                double distance = Geometry.CalculateEuclideanDistance(graph.GetVertex(from), graph.GetVertex(to));
-                double speed = 20.0 + (random.NextDouble() * 80.0);
-
-                var edge = graph.AddEdge(from, to, distance, speed);
-                PopulateAdvancedProperties(edge);
-                existingEdges.Add((from, to));
-                currentEdgeCount++;
+                if (from == to) continue;
+                AddBidirectionalOrSingleEdge(from, to);
             }
 
             return graph;

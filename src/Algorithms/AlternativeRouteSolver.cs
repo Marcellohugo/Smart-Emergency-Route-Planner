@@ -88,7 +88,7 @@ namespace SmartEmergencyRoutePlanner.Algorithms
                 }
             }
 
-            return ((double)overlapCount / edgesA.Count) * 100.0;
+            return ((double)overlapCount / (routeB.Count - 1)) * 100.0;
         }
     }
 }

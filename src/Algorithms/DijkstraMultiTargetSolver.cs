@@ -12,7 +12,7 @@ namespace SmartEmergencyRoutePlanner.Algorithms
         /// Solves the multi-hospital routing query by executing a single-source Dijkstra run,
         /// then identifying the target hospital with the minimum travel time.
         /// </summary>
-        public PathResult Solve(Graph graph, int source, List<int> targetHospitals)
+        public PathResult Solve(Graph graph, int source, List<int> targetHospitals, bool emergencyMode = false)
         {
             var stopwatch = Stopwatch.StartNew();
 
@@ -58,7 +58,7 @@ namespace SmartEmergencyRoutePlanner.Algorithms
                     int v = edge.To;
                     if (visited[v]) continue;
 
-                    double newDist = dist[u] + edge.EffectiveTravelTimeMinutes;
+                    double newDist = dist[u] + edge.GetWeight(emergencyMode);
                     if (newDist < dist[v])
                     {
                         dist[v] = newDist;

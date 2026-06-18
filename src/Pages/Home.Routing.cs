@@ -67,7 +67,7 @@ public partial class Home
 
         try
         {
-            var validation = RoutePlanner.ValidateWithBellmanFord(ActiveGraph, ActivePathResult, SourceNodeId, TargetNodeId, EmergencyMode);
+            var validation = RoutePlanner.ValidateWithBellmanFord(ActiveGraph, ActivePathResult, SourceNodeId, TargetNodeId, EmergencyMode, ActiveSolver);
             ValidationStatus = validation.Status;
             if (!string.IsNullOrWhiteSpace(validation.WarningMessage))
             {

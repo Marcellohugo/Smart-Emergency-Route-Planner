@@ -12,7 +12,7 @@ namespace SmartEmergencyRoutePlanner.Algorithms
         /// then identifying the target hospital with the minimum travel time.
         /// Runtime and expansions are aggregated to show the total cost of multiple runs.
         /// </summary>
-        public PathResult Solve(Graph graph, int source, List<int> targetHospitals, double maxSpeedKmh = 100.0)
+        public PathResult Solve(Graph graph, int source, List<int> targetHospitals, double maxSpeedKmh = 100.0, bool emergencyMode = false)
         {
             var stopwatch = Stopwatch.StartNew();
 
@@ -25,7 +25,7 @@ namespace SmartEmergencyRoutePlanner.Algorithms
 
             foreach (int hospital in targetHospitals)
             {
-                var res = astar.Solve(graph, source, hospital, maxSpeedKmh);
+                var res = astar.Solve(graph, source, hospital, maxSpeedKmh, emergencyMode);
 
                 totalExpandedNodes += res.ExpandedNodes;
                 totalRelaxationCount += res.RelaxationCount;
